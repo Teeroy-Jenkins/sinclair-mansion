@@ -95,16 +95,20 @@ remembered in the browser.
    still; the screen opens on black ("Murder at Sinclair Mansion") and fades in on the table. The
    camera cuts to the household from the dining room's corner, glides round to the other side as
    the Murder Mystery guard (his chathead) bursts in ("Nobody move! Lord Sinclair has been
-   murdered! His body is lying in ..."), then down the table as he warns there's a detective
-   among them (never saying who).
+   murdered! His body is somewhere on the grounds. Whoever finds it, report it!"), then down the
+   table as he warns there's a detective among them (never saying who).
    Then the camera goes back to you (with your own angle), your role box opens and round 1 starts.
    The shots are `INTRO_CAMERAS` in `mansion.ts`; the timeline is `introShots` in `MurderGame.ts`.
    Nobody can fight, do chores or ring the clock during it.
 1. **The body.** Lord Sinclair is found dead somewhere different each game (kitchen,
    drawing room, entrance hall, the walled West Yard outside, garden, library or David's room).
    His body lies in a pool of blood (the cache's "Corpse" NPC, so it never blocks anyone's way).
+   **Nobody knows where it is until someone reports it**: whoever comes across it left-clicks it
+   (**Report**, once). The whole house is told who found it and in which room, the overlay shows
+   where, and only then can the Detective study it. Bots report a body when they walk into its
+   room (a Murderer bot leaves its own victims for someone else to find).
 2. **Investigation** (3 min). The RuneLite-style overlay shows your role, the round timer,
-   how many players are alive, where the body was found, and the chore you're
+   how many players are alive, where the body was found (once reported), and the chore you're
    on now (its name, then its next step and where). Run energy is topped up at the start of
    every round.
 3. **The grandfather clock strikes.** The dining room's grandfather clock chimes, the screen
@@ -201,10 +205,11 @@ labelled "the murder weapon" before an arrest. (The quest's Criminal's dagger wa
 the pool: it's a quest item with no combat stats, so it couldn't be wielded.)
 
 * The Murderer starts holding the real one, with their prints on it for good.
-* **Clues.** The Detective left-clicks the body (**Investigate**), or uses flypaper on it or its
-  blood, and studies it for 25 s, kneeling over it the whole time (the kneel, 645, repeats).
-  That gives one clue a round: each clue rules out some of the wrong weapon types, and the last
-  one names the type. It takes one clue per 3 players (at least 2, at most 4), so in a big game
+* **Clues.** The Detective left-clicks a reported body (**Investigate**), or uses flypaper on it
+  or its blood, and studies it for 25 s, kneeling over it the whole time (the kneel, 645, repeats).
+  Lord Sinclair's body gives one clue a round, and **each of the Murderer's victims gives one more,
+  once** (so every kill leaves the Detective more to go on): each clue rules out some of the wrong
+  weapon types, and the last one names the type. It takes one clue per 3 players (at least 2, at most 4), so in a big game
   the type only comes out late. The overlay shows the clues so far and the types still possible.
   The clues belong to the case: a new Detective carries on where the last one stopped. After
   that, lifting prints from a weapon of the wrong type tells them it's not the one.
@@ -215,8 +220,10 @@ the pool: it's a quest item with no combat stats, so it couldn't be wielded.)
   tells the Detective, quietly, about a weapon you're holding.
 * **Kills are never announced.** The victim is told they were killed; everyone else only sees
   the living count drop, and has to work out who and where.
-* **Kills leave blood.** When the Murderer kills someone, a pool of blood marks the spot for the
-  rest of the game.
+* **Kills leave blood, and a body.** When the Murderer kills someone, a pool of blood marks the
+  spot for the rest of the game, with the victim's body lying in it (the same Corpse NPC as Lord
+  Sinclair's). Like his, it's unknown until someone reports it. The blood and bodies are drawn over
+  rugs (the stain is a decal on top of the floor decoration, `client/rs/scene/floorDecals.ts`).
 ## Chores
 
 Chores are household jobs done the way RuneScape does them, at least **five steps** each, starting
@@ -568,8 +575,9 @@ after 30 s). It is no longer a hiding place. The buttered-potato chore starts by
 | Everyone | Middle mouse or arrow keys turn and tilt the camera (horizontal turning is inverted, `INVERT_HORIZONTAL_ROTATION` in `client/game/Camera.ts`). Click dialog text to choose. |
 | Everyone | Furniture's normal option (Search, Open, Investigate, Take-from) searches it, or hands you a chore tool if that's your next step. Doors start open, and anyone can open or close them (bots open closed doors in their way; the dining room's west door swings into the dining room, hinged on the north side of the frame, so it never blocks the hall). **Ring** the grandfather clock (once a game) to end the round early. Examine works on everything (texts from the OSRS wiki in `server/data/examine-text.json`). |
 | Murderer | Right-click your weapon, **Use**, then click a stash spot (any furniture with a search-type option) to hide it there, or a person to hand it over (3 s; people nearby in the same room see it, but not what was handed). |
+| Everyone alive | Left-click an unreported body (**Report**, once) to tell the house where it is. |
 | Household | Search furniture. A weapon you find is taken at once (with room in your pack) and announced to everyone. `::report` reports a weapon you're holding. Reports reach only the Detective. |
-| Detective (whoever holds the flypaper) | Left-click the body (**Investigate**) or **Use** flypaper on it or its blood (a clue to the weapon type, 25 s, one a round), on furniture or on a person (prints, 30 s, stay put). Right-click a person, **Stop and Search** (once a round) to confiscate their weapons. Results go to the chatbox, the overlay and `::notes`. |
+| Detective (whoever holds the flypaper) | Left-click a reported body (**Investigate**) or **Use** flypaper on it or its blood (a clue to the weapon type, 25 s: Lord Sinclair's one a round, each victim's one, once), on furniture or on a person (prints, 30 s, stay put). Right-click a person, **Stop and Search** (once a round) to confiscate their weapons. Results go to the chatbox, the overlay and `::notes`. |
 | Ghosts | The dead, the wrongly arrested and anyone who joins mid-game are invisible to the living. They can walk, watch and take the stairs and ladders but touch nothing else, don't vote, and their public chat only reaches other ghosts. |
 
 Hovering over anything you can interact with shows its left-click option by the cursor, like RuneLite's Mouse Tooltips (`MouseTooltips` in `client/game/murder/MurderExtras.tsx`). OSRS's own cursor tooltip (a cache interface) is told there is at most one option, so it never adds "+N options" (`MINIMENU_NUMOPS` in `client/rs/cs2/handlers/ClientOps.ts`). Menus no longer show "(ID: ...)".

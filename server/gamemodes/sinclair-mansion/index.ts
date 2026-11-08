@@ -236,6 +236,8 @@ class SinclairMansionGamemode extends SinclairBase {
     private readonly dropStacks: Array<{ stackId: number; qty: number }> = [];
     /** Blood left where the Murderer killed someone this game. */
     private readonly killMarks: Tile[] = [];
+    /** The Murderer's victims' bodies, lying in their blood (cleared with the kill marks). */
+    private readonly victimBodies: NpcState[] = [];
     private bloodRemoved = false;
     /** The main menu's cosmetic store and bank. */
     private store: SinclairStore | undefined;
@@ -453,7 +455,7 @@ class SinclairMansionGamemode extends SinclairBase {
         return spellId === BIND && !!this.participant(player)?.alive;
     }
 
-    /** The Detective's left-click on Lord Sinclair's body studies it for a clue; nobody attacks the Demon butler. */
+    /** A left-click on a body reports it (or, once reported, the Detective studies it); nobody attacks the Demon butler. */
     resolveNpcOption(_player: PlayerState, npc: NpcState, opNum: number): string | undefined {
         if (npc.typeId === BODY_NPC) return opNum === 1 ? "Investigate" : "refused";
         if (npc.typeId === DEMON_BUTLER.npcId && opNum !== 1) return "refused"; // he only serves
@@ -671,21 +673,25 @@ class SinclairMansionGamemode extends SinclairBase {
             }
         }
         // The Detective studies the blood with their flypaper to learn the weapon type.
-        registry.registerItemOnLoc(ITEMS.flypaper, ORIGINAL_BLOOD.locId, ({ player }) => {
+        registry.registerItemOnLoc(ITEMS.flypaper, ORIGINAL_BLOOD.locId, ({ player, target }) => {
             const p = this.participant(player);
-            if (p) game.inspectScene(p);
+            const b = game.bodyAt({ x: target.tile.x, y: target.tile.y, level: target.level });
+            if (p && b) game.useBody(p, b.id);
         });
         // ...or on the body itself, or just its Investigate option.
-        registry.registerItemOnNpc(ITEMS.flypaper, BODY_NPC, ({ player }) => {
+        registry.registerItemOnNpc(ITEMS.flypaper, BODY_NPC, ({ player, target }) => {
             const p = this.participant(player);
-            if (p) game.inspectScene(p);
+            const b = game.bodyByNpc(target.id);
+            if (p && b) game.useBody(p, b.id);
         });
         registry.registerNpcScript({
             npcId: BODY_NPC,
             option: "investigate",
-            handler: ({ player }) => {
+            // Report it if nobody has yet (anyone alive); once reported, the Detective studies it.
+            handler: ({ player, npc }) => {
                 const p = this.participant(player);
-                if (p) game.inspectScene(p);
+                const b = game.bodyByNpc(npc.id);
+                if (p && b) game.useBody(p, b.id);
             },
         });
         // The Demon butler's Talk-to opens his pantry: chore tokens for sharks, Bind runes and prayer potions.
@@ -1592,7 +1598,7 @@ class SinclairMansionGamemode extends SinclairBase {
         fadeIn: () => {},
         setCrimeScene: (tile, present) => {
             const loc = this.services?.location;
-            if (!loc) return;
+            if (!loc) return undefined;
             const b = ORIGINAL_BLOOD;
             if (present) loc.replaceTemporaryLoc(WORLD, 0, b.locId, tile, tile.level, { oldShape: b.shape, newShape: b.shape, newRotation: b.rotation });
             else loc.clearTemporaryLoc(WORLD, 0, tile, tile.level, b.shape);
@@ -1606,13 +1612,20 @@ class SinclairMansionGamemode extends SinclairBase {
                     this.body = body;
                 }
             }
+            return this.body?.id;
         },
         markKill: (tile) => {
             const loc = this.services?.location;
-            if (!loc) return;
+            if (!loc) return undefined;
             const b = ORIGINAL_BLOOD;
             loc.replaceTemporaryLoc(WORLD, 0, b.locId, tile, tile.level, { oldShape: b.shape, newShape: b.shape, newRotation: Math.floor(Math.random() * 4) });
             this.killMarks.push({ ...tile });
+            // The victim's body lies in the blood (the same Corpse NPC as Lord Sinclair's).
+            const body = this.services?.npc.spawnNpc({ id: BODY_NPC, x: tile.x, y: tile.y, level: tile.level, wanderRadius: 0 });
+            if (!body) return undefined;
+            body.scriptControlled = true;
+            this.victimBodies.push(body);
+            return body.id;
         },
         clearDrops: () => {
             // Whatever the dead left lying around last game (taken stacks are already gone).
@@ -1628,6 +1641,7 @@ class SinclairMansionGamemode extends SinclairBase {
         clearKillMarks: () => {
             const loc = this.services?.location;
             for (const t of this.killMarks.splice(0)) loc?.clearTemporaryLoc(WORLD, 0, t, t.level, ORIGINAL_BLOOD.shape);
+            for (const body of this.victimBodies.splice(0)) this.services?.npc.removeNpc(body.id);
         },
         face: (p, tile) => {
             // A one-off turn (the location service's faceTile forces the facing until cleared,

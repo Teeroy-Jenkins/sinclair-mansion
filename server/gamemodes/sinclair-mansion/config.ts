@@ -89,6 +89,8 @@ export const MURDER_CONFIG = {
         chorePerStep: 25,
         findWeapon: 10,
         reportWeapon: 20,
+        /** Finding a body (Lord Sinclair's or a victim's) and reporting it. */
+        reportBody: 20,
         inspectScene: 40,
         liftPrints: 15,
         stashWeapon: 50,

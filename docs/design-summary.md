@@ -28,10 +28,11 @@ Roles are dealt at random; nobody picks one. A game has 4–10 players (people a
 ## A round
 
 1. **Opening cutscene** (first round only, 20 s): everyone is seated at the dinner table, the
-   Murder Mystery guard bursts in, says where the body lies and warns there's a detective among
-   them, without saying who.
+   Murder Mystery guard bursts in with the news of the murder and warns there's a detective among
+   them, without saying who. He doesn't say where the body is.
 2. **The body** lies somewhere different each game (kitchen, drawing room, entrance hall, West
-   Yard, garden, library or David's room).
+   Yard, garden, library or David's room). Nobody knows where until someone finds it and
+   **reports** it (a one-time left-click); then the whole house is told who found it and where.
 3. **Investigation** (3 min): chores, clue gathering, fights and kills. Each player may **Ring**
    the grandfather clock once per game to end it early.
 4. **The clock strikes**: the screen fades to black and everyone is seated at the dining table.
@@ -66,8 +67,10 @@ announced: the victim is told, everyone else only sees the living count drop.
 
 - **Never announced** (not by the guard, the overlay or `::who`), though their gear gives them
   away: fire cape, amulet of fury, abyssal whip, fighter torso and dragon platelegs.
-- **Studies the body** (25 s, one clue a round). Each clue rules out wrong weapon types; the last
-  names the type. It takes one clue per 3 players (2 to 4).
+- **Studies the body** (25 s, one clue a round) once it has been reported. Each clue rules out
+  wrong weapon types; the last names the type. It takes one clue per 3 players (2 to 4).
+- **Studies the victims.** Everyone the Murderer kills leaves a body in their blood, which anyone
+  can report. Each victim's body gives the Detective one extra clue, once.
 - **Lifts prints** with the flypaper from weapons, furniture and people (30 s).
 - **Stop and Search**, once a round: holds someone for 3 s and confiscates every pool weapon they
   carry. The dragon claws are hidden too well to be found.
@@ -181,7 +184,7 @@ browser, one save per name, and follow you to any copy of the game you play on.
 ## Overlay and controls
 
 - A RuneLite-style overlay shows your role, the round timer, the living count, where the body
-  was found and your current chore step. The Murderer sees escape progress; the Detective sees
+  was found (once someone has reported it) and your current chore step. The Murderer sees escape progress; the Detective sees
   clues, their notebook and disturbed furniture.
 - RuneScape's flashing yellow hint arrow points at your next chore step, or at the stairs when
   it's on the other floor.

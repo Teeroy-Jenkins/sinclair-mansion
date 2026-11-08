@@ -24,6 +24,7 @@ import { HSL_RGB_MAP, adjustOverlayLight, adjustUnderlayLight, packHsl } from ".
 import { generateHeight } from "../util/HeightCalc";
 import { CollisionMap } from "./CollisionMap";
 import { Scene } from "./Scene";
+import { FLOOR_DECAL_LIFT, FLOOR_DECAL_LOCS } from "./floorDecals";
 import { SceneTileModel } from "./SceneTileModel";
 import { Entity } from "./entity/Entity";
 import { EntityType, calculateEntityTag, getIdFromTag } from "./entity/EntityTag";
@@ -845,7 +846,12 @@ export class SceneBuilder {
                 entity = this.locModelLoader.getModel(locType, type, rotation, contourGroundInfo);
             }
 
-            scene.newFloorDecoration(level, tileX, tileY, centerHeight, entity, tag, flags);
+            if (FLOOR_DECAL_LOCS.has(id | 0)) {
+                // A stain on the floor: it lies over the rug instead of replacing it.
+                scene.newFloorDecal(level, tileX, tileY, centerHeight - FLOOR_DECAL_LIFT, entity, tag, flags);
+            } else {
+                scene.newFloorDecoration(level, tileX, tileY, centerHeight, entity, tag, flags);
+            }
             if (locType.clipType === 1 && collisionMap) {
                 collisionMap.setBlockedByFloorDec(tileX, tileY);
             }

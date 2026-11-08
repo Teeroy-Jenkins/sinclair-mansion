@@ -290,8 +290,8 @@ export interface GameIO {
     fadeOut(p: Participant, caption?: string): void;
     fadeIn(p: Participant): void;
     face(p: Participant, tile: Tile): void;
-    /** Show or clear Lord Sinclair's body and blood at the crime scene. */
-    setCrimeScene(tile: Tile, present: boolean): void;
+    /** Show or clear Lord Sinclair's body and blood at the crime scene. Returns the body's NPC id, if shown. */
+    setCrimeScene(tile: Tile, present: boolean): number | undefined;
     /**
      * Drop everything they carry and wear on the floor for anyone to take (coins stay: they're
      * the player's own). Returns what was dropped.
@@ -301,8 +301,11 @@ export interface GameIO {
     clearDrops(): void;
     /** Remove all ground items left by the dead (called when the game ends, before the lobby). */
     clearGroundItems(): void;
-    /** A pool of blood where the Murderer killed someone (cleared by clearKillMarks). */
-    markKill(tile: Tile): void;
+    /**
+     * A pool of blood where the Murderer killed someone, with the victim's body lying in it
+     * (both cleared by clearKillMarks). Returns the body's NPC id.
+     */
+    markKill(tile: Tile): number | undefined;
     clearKillMarks(): void;
     /**
      * Give this game's combat stats, take away any combat gear, then wear `wear` (equipment slot
@@ -365,7 +368,10 @@ export interface MurderHud {
     plant?: boolean;
     /** You planted a weapon on someone who still has it: right-click "Pickpocket" to take it back. */
     pickpocket?: boolean;
+    /** Where Lord Sinclair's body was found, once someone has reported it. */
     crimeScene?: string;
+    /** Bodies nobody has reported yet (NPC ids): the client offers Report on them. */
+    unreported?: number[];
     weaponType?: string;
     /** The Detective's progress on the weapon type: clues so far, clues needed, types left, and whether the body has a clue this round. */
     clues?: { have: number; need: number; possible: string[]; ready: boolean };
@@ -496,11 +502,34 @@ export const stepOp = (s: TaskStep): string =>
         .map((w) => w[0].toUpperCase() + w.slice(1))
         .join(" ");
 
+/** A body lying in its blood: Lord Sinclair's, or one of the Murderer's victims. */
+export interface Body {
+    /** Its index in MurderGame.bodies (0: Lord Sinclair). */
+    id: number;
+    tile: Tile;
+    room: string;
+    /** The victim's name (none: Lord Sinclair). */
+    victim?: string;
+    /** Who killed them (a participant key). */
+    killer?: string;
+    /** Someone has found it and reported it: everyone knows where it is. */
+    reported: boolean;
+    /** A victim's body has given the Detective its clue. */
+    studied: boolean;
+    /** The body's NPC in the world, if the engine spawned one. */
+    npc?: number;
+}
+
 export class MurderGame {
     readonly participants = new Map<string, Participant>();
     readonly containers = new Map<string, Container>();
     weapons: Weapon[] = [];
     crimeScene: { tile: Tile; room: string } | undefined;
+    /**
+     * The bodies: Lord Sinclair's (id 0, at the crime scene) and one for everyone the Murderer
+     * kills, lying in their blood. Nobody knows where a body is until someone reports it.
+     */
+    bodies: Body[] = [];
     phase: Phase = "lobby";
     round = 0;
     tick = 0;
@@ -809,6 +838,7 @@ export class MurderGame {
         for (const c of this.containers.values()) c.prints.clear();
         this.io.clearKillMarks();
         this.io.clearDrops();
+        this.bodies = [];
         const all = [...this.participants.values()];
         this.rosterSize = all.length;
         for (const p of all) {
@@ -858,10 +888,10 @@ export class MurderGame {
      * said: the guard only warns there's one among them.
      */
     private introShots(): CutsceneShot[] {
-        const room = theRoom(this.crimeScene?.room ?? "the house", true);
+        // Where the body lies is for the household to find: whoever comes across it reports it.
         return [
             { camera: 0, lines: ["Evening at Sinclair Mansion.", "The household sits down to dinner..."] },
-            { camera: 1, speaker: "guard", lines: ["Nobody move! Lord Sinclair has been murdered!", `His body is lying in ${room}.`, "And the killer is sitting at this table."] },
+            { camera: 1, speaker: "guard", lines: ["Nobody move! Lord Sinclair has been murdered!", "His body is somewhere on the grounds. Whoever finds it, report it!", "And the killer is sitting at this table."] },
             { camera: 2, speaker: "guard", lines: ["There's a detective among you, and they will find the killer.", "The rest of you, get on with your chores.", "Nobody leaves this house!"] },
         ];
     }
@@ -900,7 +930,7 @@ export class MurderGame {
             this.io.dialog(p, this.roleBlurb(p));
         }
         this.startInvestigation();
-        this.announce(`Lord Sinclair has been found dead in ${theRoom(this.crimeScene!.room)}. The blood is still on the floor.`);
+        this.announce("Lord Sinclair has been murdered! Find his body and report it (left-click it).");
     }
 
     private assignRoles(all: Participant[]): void {
@@ -954,7 +984,8 @@ export class MurderGame {
         if (this.crimeScene) this.io.setCrimeScene(this.crimeScene.tile, false);
         const tile = pickOne(this.layout.crimeScenes);
         this.crimeScene = { tile, room: this.io.roomAt(tile) };
-        this.io.setCrimeScene(tile, true);
+        const npc = this.io.setCrimeScene(tile, true);
+        this.bodies.push({ id: this.bodies.length, tile: { ...tile }, room: this.crimeScene.room, reported: false, studied: false, npc });
     }
 
     roleBlurb(p: Participant): string[] {
@@ -1474,7 +1505,9 @@ export class MurderGame {
         this.io.dropAll(p, at);
         this.eliminate(p, false);
         if (killer && killer.role === "murderer" && p.role !== "murderer") {
-            this.io.markKill(at); // the Murderer's work leaves blood on the floor
+            // The Murderer's work leaves blood on the floor, and the body lying in it.
+            const npc = this.io.markKill(at);
+            this.bodies.push({ id: this.bodies.length, tile: { ...at }, room: this.io.roomAt(at), victim: p.name, killer: killer.key, reported: false, studied: false, npc });
             this.awardKind(killer, "murdererKill", `Killed ${p.name}`);
         }
         // The Detective or the household killing someone who wasn't the Murderer pays for it.
@@ -1731,10 +1764,38 @@ export class MurderGame {
         const a = this.io.pos(p), b = this.io.pos(q);
         return !!a && !!b && a.level === b.level && cheb(a, b) <= 1;
     }
-    nearScene(p: Participant): boolean {
+    /** Next to a body (Lord Sinclair's by default). */
+    nearBody(p: Participant, id = 0): boolean {
         const at = this.io.pos(p);
-        const s = this.crimeScene?.tile;
+        const s = this.bodies[id]?.tile;
         return !!at && !!s && at.level === s.level && cheb(at, s) <= 1;
+    }
+    nearScene(p: Participant): boolean {
+        return this.nearBody(p, 0);
+    }
+    /** The body (if any) with this NPC id. */
+    bodyByNpc(npcId: number): Body | undefined {
+        return this.bodies.find((b) => b.npc === npcId);
+    }
+    /** The body lying on this tile (the blood under it), if any. */
+    bodyAt(tile: Tile): Body | undefined {
+        return this.bodies.find((b) => b.tile.level === tile.level && b.tile.x === tile.x && b.tile.y === tile.y);
+    }
+    /** An unreported body in sight: same floor and zone (what a bot would notice walking in). */
+    bodyInView(p: Participant): Body | undefined {
+        const at = this.io.pos(p);
+        if (!at) return undefined;
+        const zone = this.layout.zoneAt(at);
+        return this.bodies.find((b) => !b.reported && b.tile.level === at.level && this.layout.zoneAt(b.tile) === zone);
+    }
+    /** Whose body it is, for messages. */
+    bodyName(b: Body): string {
+        return b.victim ? `${b.victim}'s body` : "Lord Sinclair's body";
+    }
+    /** A body the Detective can learn something from now (Lord Sinclair's once a round, each victim's once). */
+    bodyHasClue(b: Body): boolean {
+        if (!b.reported) return false;
+        return b.victim ? !b.studied : this.caseFile.lastRound !== this.round;
     }
     /** The chore step this participant should do here with this item, if any. */
     /** Without an item: the fetch step due here (one that needs no item), if any. */
@@ -1951,13 +2012,46 @@ export class MurderGame {
         }
         this.begin(p, kind === "container" ? "lift-container" : "lift-person", id, C.detective.liftSec);
     }
-    /** The Detective studies the body for a clue to the weapon type (one clue a round). */
-    inspectScene(p: Participant): void {
-        if (!this.isDetective(p)) return this.io.message(p, "Lord Sinclair's body. You'd better leave this to the Detective.");
+    /**
+     * Someone came across a body nobody had reported, and reports it (a left-click): now everyone
+     * knows where it is, and the Detective can study it.
+     */
+    reportBody(p: Participant, id: number): void {
+        const b = this.bodies[id];
+        if (!b || b.reported) return;
+        if (this.phase !== "investigation" || !p.alive) return this.io.message(p, "You can't do that now.");
+        if (this.fading(p)) return;
+        const at = this.io.pos(p);
+        // 2, not 1: the engine lets you click it from a tile away.
+        if (!at || at.level !== b.tile.level || cheb(at, b.tile) > 2) return this.io.message(p, "You need to be next to it.");
+        b.reported = true;
+        this.awardKind(p, "reportBody", `Reported ${this.bodyName(b)}`);
+        const where = theRoom(b.room);
+        if (b.victim) this.announce(`${p.name} has found ${b.victim}'s body in ${where}! They were murdered.`);
+        else this.announce(`${p.name} has found Lord Sinclair's body in ${where}! The blood is still on the floor.`);
+        if (this.isDetective(p)) this.io.message(p, `Investigate ${this.bodyName(b)} (left-click it) for a clue to the murder weapon.`);
+    }
+    /** A left-click on a body (or the flypaper used on it): report it if nobody has, else study it. */
+    useBody(p: Participant, id: number): void {
+        const b = this.bodies[id];
+        if (!b) return;
+        if (!b.reported) return this.reportBody(p, id);
+        this.inspectScene(p, id);
+    }
+    /**
+     * The Detective studies a body for a clue to the weapon type: Lord Sinclair's gives one clue a
+     * round, and each of the Murderer's victims one more, once. Without a body named: Lord Sinclair's.
+     */
+    inspectScene(p: Participant, id = 0): void {
+        const b = this.bodies[id];
+        if (!b) return;
+        if (!b.reported) return this.reportBody(p, id);
+        if (!this.isDetective(p)) return this.io.message(p, `${this.bodyName(b)}. You'd better leave this to the Detective.`);
         const solved = this.solvedCategory();
         if (solved) return this.io.message(p, `You already know the killer used a ${solved}.`);
-        if (this.caseFile.lastRound === this.round) return this.io.message(p, "You've learned all you can from the body this round. Look again next round.");
-        this.begin(p, "inspect", "scene", C.detective.inspectSec);
+        if (b.victim && b.studied) return this.io.message(p, `You've learned all you can from ${b.victim}'s body.`);
+        if (!b.victim && this.caseFile.lastRound === this.round) return this.io.message(p, "You've learned all you can from the body this round. Look again next round.");
+        this.begin(p, "inspect", String(id), C.detective.inspectSec);
     }
     /** The weapon type, once the clues leave only one. */
     solvedCategory(): string | undefined {
@@ -2055,7 +2149,8 @@ export class MurderGame {
             this.tellWitnesses(p, `The Detective begins dusting the ${name} for prints.`);
         }
         if (kind === "inspect") {
-            this.io.message(p, `You kneel and study the body. This will take a while (${C.detective.inspectSec} s)...`);
+            const b = this.bodies[Number(target)];
+            this.io.message(p, `You kneel and study ${b?.victim ? `${b.victim}'s body` : "the body"}. This will take a while (${C.detective.inspectSec} s)...`);
             this.tellWitnesses(p, "The Detective kneels to study the blood.");
         }
         if (kind === "give") {
@@ -2091,7 +2186,7 @@ export class MurderGame {
             const t = this.participants.get(a.target);
             return !!t && t.alive && this.nearPerson(p, t);
         }
-        if (a.kind === "inspect") return this.nearScene(p);
+        if (a.kind === "inspect") return this.nearBody(p, Number(a.target));
         if (a.kind === "escape") {
             const e = this.escapeAt(a.target);
             const at = this.io.pos(p);
@@ -2266,10 +2361,13 @@ export class MurderGame {
             case "inspect": {
                 const real = this.weapons.find((w) => w.real);
                 const cf = this.caseFile;
-                if (!real || !this.crimeScene || cf.lastRound === this.round) return;
-                cf.lastRound = this.round;
+                const body = this.bodies[Number(a.target)];
+                if (!real || !body || !this.bodyHasClue(body) || this.solvedCategory()) return;
+                // Lord Sinclair's body gives a clue a round; a victim's body one more, once.
+                if (body.victim) body.studied = true;
+                else cf.lastRound = this.round;
                 cf.clues++;
-                this.awardKind(p, "inspectScene", "Found a clue on the body");
+                this.awardKind(p, "inspectScene", `Found a clue on ${this.bodyName(body)}`);
                 // Each clue rules out a share of the wrong types; the last one leaves only the right one.
                 const wrong = cf.possible.filter((c) => c !== real.category);
                 const left = Math.max(0, cf.needed - cf.clues);
@@ -2281,7 +2379,7 @@ export class MurderGame {
                 const wound = solved
                     ? `Clue ${cf.clues}/${cf.needed}: ${this.layout.wounds[solved] ?? solved}`
                     : `Clue ${cf.clues}/${cf.needed}: it wasn't a ${list(ruled)}. Still possible: ${list(cf.possible)}.`;
-                this.recordLift(p, { round: this.round, target: "Crime scene", room: this.crimeScene.room, wound });
+                this.recordLift(p, { round: this.round, target: body.victim ? `${body.victim}'s body` : "Crime scene", room: body.room, wound });
                 return;
             }
             case "lift-container": {
@@ -2382,7 +2480,12 @@ export class MurderGame {
 
     notesFor(p: Participant): string[] {
         const out: string[] = [];
-        if (this.crimeScene && this.phase !== "lobby") out.push(`Crime scene: blood in ${theRoom(this.crimeScene.room)}.`);
+        if (this.phase !== "lobby") {
+            for (const b of this.bodies) {
+                if (!b.reported) continue;
+                out.push(b.victim ? `${b.victim}'s body: in ${theRoom(b.room)}.` : `Crime scene: blood in ${theRoom(b.room)}.`);
+            }
+        }
         if (this.isDetective(p)) {
             const names = [...this.disturbed].map((id) => this.containers.get(id)?.name).filter(Boolean);
             out.push(`Disturbed this round: ${names.length ? names.join(", ") : "nothing yet"}.`);
@@ -2417,10 +2520,13 @@ export class MurderGame {
             stopSearch: this.canFrisk(p) || undefined,
             plant: (this.phase === "investigation" && p.alive && this.weaponsHeldBy(p).length > 0) || undefined,
             pickpocket: (this.phase === "investigation" && p.alive && this.plantedOnOthers(p).length > 0) || undefined,
-            crimeScene: running ? this.crimeScene?.room : undefined,
+            crimeScene: running && this.bodies[0]?.reported ? this.crimeScene?.room : undefined,
+            unreported: this.phase === "investigation" && p.alive
+                ? this.bodies.filter((b) => !b.reported && b.npc !== undefined).map((b) => b.npc!)
+                : undefined,
             weaponType: sleuth ? p.knownCategory : undefined,
             clues: sleuth && !p.knownCategory
-                ? { have: this.caseFile.clues, need: this.caseFile.needed, possible: this.caseFile.possible.slice().sort(), ready: this.caseFile.lastRound !== this.round }
+                ? { have: this.caseFile.clues, need: this.caseFile.needed, possible: this.caseFile.possible.slice().sort(), ready: this.bodies.some((b) => this.bodyHasClue(b)) }
                 : undefined,
             // Chores belong to a running game: none in the lobby or on the end screen.
             tasks: !running ? [] : p.tasks.map((t) => {

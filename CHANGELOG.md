@@ -1,5 +1,20 @@
 # Patch notes
 
+## v0.3.0
+
+**Bodies have to be found**
+- Nobody knows where Lord Sinclair's body is when the game starts. The guard in the opening cutscene only says he has been murdered, and the overlay's "Body found" line stays empty.
+- Whoever comes across the body left-clicks it (**Report**, once). The whole house is told who found it and in which room, the overlay and notes show where, and the finder earns 20 coins. Only then can the Detective study it.
+- Bots report a body when they walk into its room. A Murderer bot leaves its own victims for someone else to find.
+
+**Victims leave a body**
+- Everyone the Murderer kills now leaves a body lying in their blood. Like Lord Sinclair's, it can be reported once.
+- Once a victim's body is reported, the Detective can **Investigate** it for one extra clue to the murder weapon. It's on top of Lord Sinclair's one clue a round, so each kill gives the Detective more to go on. Each victim's body gives its clue once. The bot Detective studies victims' bodies too.
+
+**Bug fixes**
+- A blood stain no longer deletes the rug under it. OSRS allows one floor decoration per tile, so a stain spawned on a rug replaced it, and the rug stayed gone after the stain was cleared. Blood is now drawn as a layer on top of whatever is on the floor.
+- Bodies are drawn on top of rugs and other floor decorations instead of being partly hidden under them.
+
 ## v0.2.4
 
 **Bug fixes**

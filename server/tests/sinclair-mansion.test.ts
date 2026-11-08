@@ -128,10 +128,11 @@ function makeWorld(opts: { humans?: string[]; pickFirst?: boolean; keepIntro?: b
         fadeIn: () => {},
         face: () => {},
         clearDrops: () => {},
-        markKill: (t) => killMarks.push({ ...t }),
+        markKill: (t) => 2000 + killMarks.push({ ...t }),
         clearKillMarks: () => killMarks.splice(0),
         setCrimeScene: (t, on) => {
             if (on) scenes.push(t);
+            return on ? 1000 : undefined;
         },
         setupCombat: (p, stats, wear, carry) => {
             statsOf.set(p.key, stats);
@@ -796,6 +797,8 @@ check("the crime scene moves; the body gives one clue a round, and enough clues 
         assert.equal(need, Math.max(C.detective.minClues, Math.min(C.detective.maxClues, Math.round(n / C.detective.playersPerClue))), `${n} players`);
         const det = w.game.detective()!;
         const real = realWeapon(w).category;
+        w.pos.set(det.key, { ...scene.tile, x: scene.tile.x + 1 });
+        w.game.reportBody(det, 0);
         for (let k = 1; k <= need; k++) {
             w.game.phaseEnds = w.game.tick + 1000; // the test fakes each new round, so keep the clock running
             w.pos.set(det.key, { ...scene.tile, x: scene.tile.x + 1 });
@@ -835,6 +838,92 @@ check("the Murderer's kills leave blood where they happened, cleared next game",
     const other = [...w.game.participants.values()].find((p) => p.alive && p.role !== "murderer" && p !== victim)!;
     w.game.onDeath(other, undefined); // not the Murderer's doing
     assert.equal(w.killMarks.length, 1);
+});
+
+check("nobody knows where Lord Sinclair's body is until someone reports it (a left-click)", () => {
+    const { w, host } = setup("npc");
+    w.game.botThink = undefined;
+    const scene = w.game.crimeScene!;
+    assert.equal(w.game.hudFor(host).crimeScene, undefined, "the overlay doesn't say where");
+    assert.deepEqual(w.game.hudFor(host).unreported, [1000], "the body can be reported");
+    assert.ok(!w.game.notesFor(host).some((n) => n.includes(scene.room)), "nor do the notes");
+    // Too far away: nothing happens.
+    w.pos.set(host.key, { ...scene.tile, x: scene.tile.x + 6 });
+    w.game.useBody(host, 0);
+    assert.equal(w.game.bodies[0].reported, false);
+    w.pos.set(host.key, { ...scene.tile, x: scene.tile.x + 1 });
+    w.announcements.length = 0;
+    w.game.useBody(host, w.game.bodyByNpc(1000)!.id);
+    assert.equal(w.game.bodies[0].reported, true);
+    assert.ok(w.announcements.some((a) => a.includes(host.name) && a.includes("Lord Sinclair") && a.includes(scene.room)), w.announcements.join("\n"));
+    assert.equal(w.game.hudFor(host).crimeScene, scene.room);
+    assert.deepEqual(w.game.hudFor(host).unreported, []);
+    // Once: a second click doesn't announce it again.
+    const n = w.announcements.length;
+    w.game.useBody(host, 0);
+    assert.equal(w.announcements.length, n);
+});
+
+check("the Murderer's victims leave a body in their blood: reported, it gives the Detective one more clue", () => {
+    const { w, host } = setup("murderer");
+    w.game.botThink = undefined;
+    const det = w.game.detective()!;
+    const victim = [...w.game.participants.values()].find((p) => p.alive && p.role === "npc")!;
+    const at = { x: 2733, y: 3580, level: 0 };
+    w.pos.set(victim.key, { ...at });
+    w.game.onDeath(victim, host);
+    const body = w.game.bodies.find((b) => b.victim === victim.name)!;
+    assert.ok(body, "a body where they fell");
+    assert.deepEqual(body.tile, at);
+    assert.equal(body.reported, false);
+    assert.ok(w.game.hudFor(det).unreported?.includes(body.npc!), "it can be reported");
+    // The Detective can't study it before it's reported: the first click reports it.
+    w.pos.set(det.key, { ...at, x: at.x + 1 });
+    w.game.useBody(det, body.id);
+    assert.equal(body.reported, true);
+    assert.equal(det.action, undefined, "reporting isn't studying");
+    // Lord Sinclair's body is still unreported: no clue from it, but the victim's gives one.
+    assert.equal(w.game.caseFile.clues, 0);
+    w.game.useBody(det, body.id);
+    run(w.game, ticksFor(C.detective.inspectSec));
+    assert.equal(w.game.caseFile.clues, 1, (w.inbox.get(det.key) ?? []).slice(-3).join(" / "));
+    assert.ok(w.game.caseFile.possible.includes(realWeapon(w).category), "never rules out the real type");
+    assert.ok(det.notebook.some((e) => e.target.includes(victim.name)), "noted as the victim's body");
+    // Only once.
+    w.game.useBody(det, body.id);
+    run(w.game, ticksFor(C.detective.inspectSec));
+    assert.equal(w.game.caseFile.clues, 1, "a victim's body gives one clue");
+    // ...and it doesn't use up Lord Sinclair's clue this round.
+    const scene = w.game.crimeScene!;
+    w.pos.set(det.key, { ...scene.tile, x: scene.tile.x + 1 });
+    w.game.useBody(det, 0); // report
+    w.game.useBody(det, 0); // study
+    run(w.game, ticksFor(C.detective.inspectSec));
+    assert.equal(w.game.caseFile.clues, 2, "Lord Sinclair's body still has its clue this round");
+});
+
+check("bots report a body they come across; the Murderer leaves its own victims for others to find", () => {
+    const { w, host } = setup("detective");
+    const scene = w.game.crimeScene!;
+    const bot = [...w.game.participants.values()].find((p) => p.isBot && p.role === "npc")!;
+    const brain = createBotBrain(w.mover);
+    w.game.botThink = (g, p) => (p === bot ? brain.think(g, p) : undefined);
+    w.pos.set(bot.key, { ...scene.tile, x: scene.tile.x + 1 });
+    assert.ok(w.game.bodyInView(bot), "it sees the body");
+    for (let i = 0; i < 40 && !w.game.bodies[0].reported; i++) w.game.update();
+    assert.equal(w.game.bodies[0].reported, true, "a bot reports Lord Sinclair's body");
+    // The Murderer bot walks past its own victim.
+    const m = [...w.game.participants.values()].find((p) => p.role === "murderer")!;
+    const victim = [...w.game.participants.values()].find((p) => p.alive && p.role === "npc" && p !== bot)!;
+    const at = { x: 2733, y: 3580, level: 0 };
+    w.game.onDeath(victim, m, at);
+    const body = w.game.bodies.find((b) => b.victim === victim.name)!;
+    w.game.botThink = (g, p) => (p === m ? brain.think(g, p) : undefined);
+    w.pos.set(m.key, { ...at, x: at.x + 1 });
+    assert.ok(w.game.bodyInView(m));
+    for (let i = 0; i < 40; i++) w.game.update();
+    assert.equal(body.reported, false, "the Murderer doesn't report its own victim");
+    void host;
 });
 
 check("weapons are never labelled as the murder weapon before an arrest", () => {
@@ -1532,7 +1621,8 @@ check("the opening cutscene: seated and frozen at the table, the guard names the
     const mine = w.shots.filter((s) => s.key === host.key).map((s) => s.shot);
     assert.deepEqual(mine.map((s) => s.camera), [0, 1, 2], "three camera shots, in order");
     const said = mine.filter((s) => s.speaker === "guard").flatMap((s) => s.lines).join(" ");
-    assert.ok(said.includes(w.game.crimeScene!.room.toLowerCase()) || said.includes(w.game.crimeScene!.room), `the guard names the room: ${said}`);
+    assert.ok(!said.includes(w.game.crimeScene!.room), `the guard doesn't say where the body is: ${said}`);
+    assert.ok(/report/i.test(said), "the guard tells the household to report the body");
     // (The room's name can carry theirs: "David's Room". That isn't naming the Detective.)
     const unroomed = said.split(w.game.crimeScene!.room).join("");
     assert.ok(!unroomed.includes(w.game.detective()!.name) && /detective/i.test(said), "the guard warns of a detective, but never names them");
@@ -1612,6 +1702,7 @@ check("long actions keep animating: lockpicking the gate, chiselling a wall, stu
     const { w: w2 } = setup("detective");
     const det = w2.game.detective()!;
     w2.pos.set(det.key, { ...w2.game.crimeScene!.tile, x: w2.game.crimeScene!.tile.x + 1 });
+    w2.game.reportBody(det, 0);
     w2.game.inspectScene(det);
     run(w2.game, ticksFor(C.detective.inspectSec));
     const study = w2.anims.filter((a) => a.key === det.key && a.kind === "inspect");

@@ -9,6 +9,7 @@ import { SeqTypeLoader } from "../seqtype/SeqTypeLoader";
 import { VarManager } from "../vartype/VarManager";
 import { NpcType } from "./NpcType";
 import { NpcTypeLoader } from "./NpcTypeLoader";
+import { FLOOR_LYING_NPC_PRIORITY, FLOOR_LYING_NPCS } from "../../scene/floorDecals";
 
 export class NpcModelLoader {
     modelCache: Map<number, Model>;
@@ -87,6 +88,11 @@ export class NpcModelLoader {
                 -50,
                 -30,
             );
+
+            if (FLOOR_LYING_NPCS.has(npcType.id)) {
+                // A body lying on the floor: drawn over rugs and other floor decorations.
+                model.faceRenderPriorities = new Int8Array(model.faceCount).fill(FLOOR_LYING_NPC_PRIORITY);
+            }
 
             this.modelCache.set(npcType.id, model);
         }

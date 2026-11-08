@@ -822,8 +822,11 @@ export function checkInteractions(host: WebGLOsrsRendererHost, ): void {
                     actions = actions.slice();
                     actions[1] = "Attack";
                 }
-                if (npcType.id === MURDER_BODY_NPC && murderHud?.hud.hasFlypaper && murderHud.hud.alive) {
-                    actions = ["Investigate", ...actions.slice(1)];
+                if (npcType.id === MURDER_BODY_NPC && murderHud?.hud.alive) {
+                    // A body nobody has reported yet: anyone alive can report it (one left-click),
+                    // and only then is it known. Once reported, the Detective investigates it.
+                    if (murderHud.hud.unreported?.includes(sid | 0)) actions = ["Report", ...actions.slice(1)];
+                    else if (murderHud.hud.hasFlypaper) actions = ["Investigate", ...actions.slice(1)];
                 }
                 const followerDeprioritized = isFollowerLowPriority;
 

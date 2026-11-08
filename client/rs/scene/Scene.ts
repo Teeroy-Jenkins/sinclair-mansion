@@ -137,6 +137,25 @@ export class Scene {
         }
     }
 
+    /** A decal on top of the tile's floor decoration (which it leaves alone): see floorDecals.ts. */
+    newFloorDecal(
+        level: number,
+        tileX: number,
+        tileY: number,
+        height: number,
+        entity: Entity | undefined,
+        tag: EntityTag,
+        flags: number,
+    ): void {
+        if (!entity) return;
+        this.ensureTileExists(level, level, tileX, tileY);
+        const tile = this.tiles[level][tileX][tileY];
+        const decal = new FloorDecoration(entity, tileX * 128 + 64, tileY * 128 + 64, height, tag, flags);
+        // One decal of a kind per tile: the same stain spawned again replaces itself.
+        tile.floorDecals = (tile.floorDecals ?? []).filter((d) => d.tag !== tag);
+        tile.floorDecals.push(decal);
+    }
+
     newLoc(
         level: number,
         tileX: number,
@@ -456,6 +475,7 @@ export class Scene {
               minLevel: number;
               tileModel?: SceneTileModel;
               floorDecoration?: FloorDecoration;
+              floorDecals?: FloorDecoration[];
               wall?: Wall;
               wallDecoration?: WallDecoration;
               locs: Loc[];
@@ -470,6 +490,7 @@ export class Scene {
             minLevel: tile.minLevel,
             tileModel: tile.tileModel,
             floorDecoration: tile.floorDecoration,
+            floorDecals: tile.floorDecals,
             wall: tile.wall,
             wallDecoration: tile.wallDecoration,
             locs: tile.locs.map((loc) => this.cloneLoc(loc)),
@@ -555,6 +576,7 @@ export class Scene {
             replica.minLevel = original.minLevel;
             replica.tileModel = original.tileModel;
             replica.floorDecoration = original.floorDecoration;
+            replica.floorDecals = original.floorDecals;
             replica.wall = original.wall;
             replica.wallDecoration = original.wallDecoration;
             replica.locs = original.locs;

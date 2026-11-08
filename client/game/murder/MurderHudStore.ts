@@ -22,7 +22,10 @@ export interface MurderHud {
     plant?: boolean;
     /** You planted a weapon on someone who still has it: right-click "Pickpocket" to take it back. */
     pickpocket?: boolean;
+    /** Where Lord Sinclair's body was found, once someone has reported it. */
     crimeScene?: string;
+    /** Bodies nobody has reported yet (NPC server ids): left-click Report on one to make it known. */
+    unreported?: number[];
     weaponType?: string;
     /** The Detective's clues toward the weapon type (one a round from the body). */
     clues?: { have: number; need: number; possible: string[]; ready: boolean };

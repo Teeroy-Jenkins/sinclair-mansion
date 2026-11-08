@@ -22,6 +22,8 @@ export class SceneTile {
 
     tileModel?: SceneTileModel;
     floorDecoration?: FloorDecoration;
+    /** Decals layered over the floor decoration (blood on a rug): see floorDecals.ts. */
+    floorDecals?: FloorDecoration[];
     wall?: Wall;
     wallDecoration?: WallDecoration;
     locs: Loc[];

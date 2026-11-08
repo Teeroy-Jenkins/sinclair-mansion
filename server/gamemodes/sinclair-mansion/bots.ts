@@ -66,7 +66,7 @@ export interface BotMover {
 type Goal =
     | { kind: "container"; id: string; then: "use" | "stash" | "lift" | "chore"; item?: number }
     | { kind: "person"; key: string; then: "give" | "plant" | "pickpocket" | "lift" | "frisk" | "stalk" }
-    | { kind: "scene" }
+    | { kind: "scene"; body: number } // a body: report it, or (the Detective) study it
     | { kind: "kit" } // the dead Detective's things (whoever takes the flypaper is the Detective)
     | { kind: "clock" } // strike it to call everyone to the table
     | { kind: "butler"; ware: Ware } // spend chore tokens with the Demon butler
@@ -337,6 +337,10 @@ export function createBotBrain(mover: BotMover) {
         // its taker the Detective. The Murderer only does it with nobody watching.
         if (game.detectiveKit && b.goal?.kind !== "kit" && game.kitInView(p) && !game.isDetective(p)
             && (p.role !== "murderer" || !game.witnesses(p).some((q) => q.alive))) return go(game, p, b, { kind: "kit" });
+        if (b.goal?.kind !== "scene") {
+            const found = game.bodyInView(p);
+            if (found && !(p.role === "murderer" && found.killer === p.key)) return go(game, p, b, { kind: "scene", body: found.id });
+        }
         if (p.role === "murderer" && murdererReflex(game, p, b)) return;
         if (game.tick % 3 === 0) armThink(game, p, b);
 
@@ -854,7 +858,10 @@ export function createBotBrain(mover: BotMover) {
     }
 
     function repath(game: MurderGame, p: Participant, goal: Goal): boolean {
-        if (goal.kind === "scene") return !!game.crimeScene && mover.approachTile(p, game.crimeScene.tile);
+        if (goal.kind === "scene") {
+            const body = game.bodies[goal.body];
+            return !!body && mover.approachTile(p, body.tile);
+        }
         if (goal.kind === "kit") return !!game.detectiveKit && mover.walkTo(p, game.detectiveKit.tile);
         if (goal.kind === "container") {
             const c = game.containers.get(goal.id);
@@ -869,7 +876,7 @@ export function createBotBrain(mover: BotMover) {
     }
 
     function arrived(game: MurderGame, p: Participant, goal: Goal): boolean {
-        if (goal.kind === "scene") return game.nearScene(p);
+        if (goal.kind === "scene") return game.nearBody(p, goal.body);
         if (goal.kind === "container") {
             const c = game.containers.get(goal.id);
             return !!c && game.nearContainer(p, c);
@@ -888,7 +895,7 @@ export function createBotBrain(mover: BotMover) {
         b.goal = undefined;
         b.idleUntil = game.tick + 1 + rand(4);
         if (g.kind === "scene") {
-            game.inspectScene(p);
+            game.useBody(p, g.body);
         } else if (g.kind === "kit") {
             // One piece at a time, as a person clicks each ground item (and no faster than one every
             // 2 ticks); it stays until the kit's all picked up.
@@ -1260,10 +1267,12 @@ export function createBotBrain(mover: BotMover) {
     function detectiveThink(game: MurderGame, p: Participant, b: BotState): void {
         // First things first: study the body for a clue to what kind of weapon did it,
         // ...one clue a round, until the clues give the weapon type away.
-        if (!p.knownCategory && game.crimeScene && !b.lifted.has("scene") && game.caseFile.lastRound !== game.round) {
-            b.lifted.add("scene");
+        // A victim's body gives one more clue, once; Lord Sinclair's one a round. Only bodies someone has reported.
+        const body = p.knownCategory ? undefined : game.bodies.find((x) => game.bodyHasClue(x) && !b.lifted.has("scene:" + x.id));
+        if (body) {
+            b.lifted.add("scene:" + body.id);
             if (chance(0.35 * b.persona.chatty)) say(game, p, b, LINES.detScene());
-            return go(game, p, b, { kind: "scene" });
+            return go(game, p, b, { kind: "scene", body: body.id });
         }
         const scores = evidence(game, p, b);
         const ranked = game.living().filter((q) => q !== p).sort((a, z) => (scores.get(z.name) ?? 0) - (scores.get(a.name) ?? 0));

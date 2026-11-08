@@ -1680,6 +1680,12 @@ export class SdMapDataLoader implements RenderDataLoader<SdMapLoaderInput, SdMap
                                 pushLoc(fid, tile.floorDecoration.flags | 0);
                             } catch {}
                         }
+                        // Stains lying over it (blood on a rug)
+                        for (const decal of tile.floorDecals ?? []) {
+                            try {
+                                pushLoc(getIdFromTag(decal.tag) | 0, decal.flags | 0);
+                            } catch {}
+                        }
                         // Locs (filter to origin at this tile)
                         let supportWithoutModel = false;
                         let tallestModel = 0;

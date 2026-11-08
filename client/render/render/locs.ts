@@ -1,4 +1,5 @@
 import Denque from "denque";
+import { FLOOR_DECAL_LOCS } from "../../rs/scene/floorDecals";
 import { mat4, vec2, vec3, vec4 } from "gl-matrix";
 import { button, folder } from "leva";
 import { Schema } from "leva/dist/declarations/src/types";
@@ -454,10 +455,13 @@ export function onLocAddChange(host: WebGLOsrsRendererHost,
             // Suppress the base cache-baked loc at this tile so it doesn't
             // keep rendering alongside (or instead of) the new one - buildScene
             // has no other way to know a cache loc was replaced/removed.
-            host.locOverrides.set(`${tile.x | 0},${tile.y | 0},${level | 0},-1`, {
-                newId: 0,
-                matchType: shape as LocModelType,
-            });
+            // A stain (blood) lies over what is there (a rug) instead of replacing it.
+            if (!FLOOR_DECAL_LOCS.has(locId | 0)) {
+                host.locOverrides.set(`${tile.x | 0},${tile.y | 0},${level | 0},-1`, {
+                    newId: 0,
+                    matchType: shape as LocModelType,
+                });
+            }
 
             const mapX = Math.floor(tile.x / 64);
             const mapY = Math.floor(tile.y / 64);

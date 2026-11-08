@@ -6,6 +6,8 @@ import { Loc } from "../../rs/scene/Loc";
 import { Scene } from "../../rs/scene/Scene";
 import { SceneLoc } from "../../rs/scene/SceneLoc";
 import { SceneTile } from "../../rs/scene/SceneTile";
+import { FloorDecoration } from "../../rs/scene/FloorDecoration";
+import { FLOOR_DECAL_PRIORITY } from "../../rs/scene/floorDecals";
 import { getIdFromTag } from "../../rs/scene/entity/EntityTag";
 import { LocEntity } from "../../rs/scene/entity/LocEntity";
 import { INVALID_HSL_COLOR } from "../../rs/util/ColorUtil";
@@ -247,7 +249,8 @@ export function getSceneLocs(
             (isBlocked && startLocs.length > 0) ||
             !!tile.wall ||
             !!tile.wallDecoration ||
-            !!tile.floorDecoration;
+            !!tile.floorDecoration ||
+            !!tile.floorDecals?.length;
 
         // Ensure walls/decoration anchored to blocked planes still render even when the plane
         // is not strictly accessible (matches OSRS bridge parapet behavior).
@@ -269,33 +272,37 @@ export function getSceneLocs(
                 startLocsOverride ??
                 sourceTile.locs.filter((loc) => loc.startX === tileX && loc.startY === tileY);
 
-            if (sourceTile.floorDecoration) {
-                if (sourceTile.floorDecoration.entity instanceof Model) {
+            const floorLayers: Array<[FloorDecoration, number]> = [];
+            if (sourceTile.floorDecoration) floorLayers.push([sourceTile.floorDecoration, 3]);
+            // Stains lie over the floor decoration (blood on a rug), drawn above it.
+            for (const decal of sourceTile.floorDecals ?? []) floorLayers.push([decal, FLOOR_DECAL_PRIORITY]);
+            for (const [floorDecoration, floorPriority] of floorLayers) {
+                if (floorDecoration.entity instanceof Model) {
                     locs.push(
                         createSceneModel(
                             locTypeLoader,
                             scene,
-                            sourceTile.floorDecoration.entity,
-                            sourceTile.floorDecoration,
+                            floorDecoration.entity,
+                            floorDecoration,
                             sceneOffset,
                             sceneOffset,
                             renderLevel,
                             tileX,
                             tileY,
-                            3,
+                            floorPriority,
                             planeCullLevel,
                         ),
                     );
-                } else if (sourceTile.floorDecoration.entity instanceof LocEntity) {
+                } else if (floorDecoration.entity instanceof LocEntity) {
                     locEntities.push(
                         createSceneLocEntity(
                             locTypeLoader,
-                            sourceTile.floorDecoration.entity,
-                            sourceTile.floorDecoration,
+                            floorDecoration.entity,
+                            floorDecoration,
                             sceneOffset,
                             sceneOffset,
                             renderLevel,
-                            3,
+                            floorPriority,
                             planeCullLevel,
                         ),
                     );

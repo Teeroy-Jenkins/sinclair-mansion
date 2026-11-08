@@ -1,4 +1,5 @@
 import Denque from "denque";
+import { FLOOR_DECAL_LOCS } from "../../rs/scene/floorDecals";
 import { mat4, vec2, vec3, vec4 } from "gl-matrix";
 import { button, folder } from "leva";
 import { Schema } from "leva/dist/declarations/src/types";
@@ -194,15 +195,19 @@ export function onLocDel(host: WebGLOsrsRendererHost, tile: { x: number; y: numb
 
         try {
             const key = `${tile.x},${tile.y},${level},${shape}`;
+            const removed = host.addedLocs.get(key);
             host.addedLocs.delete(key);
 
             // Suppress the base cache-baked loc at this tile so a deregistered
             // object (e.g. a chopped tree) actually disappears - buildScene has
-            // no other way to know a cache loc was removed.
-            host.locOverrides.set(`${tile.x | 0},${tile.y | 0},${level | 0},-1`, {
-                newId: 0,
-                matchType: shape as LocModelType,
-            });
+            // no other way to know a cache loc was removed. A stain we added on
+            // top (blood on a rug) only takes itself away: the rug stays.
+            if (!removed || !FLOOR_DECAL_LOCS.has(removed.locId | 0)) {
+                host.locOverrides.set(`${tile.x | 0},${tile.y | 0},${level | 0},-1`, {
+                    newId: 0,
+                    matchType: shape as LocModelType,
+                });
+            }
 
             const mapX = Math.floor(tile.x / 64);
             const mapY = Math.floor(tile.y / 64);
