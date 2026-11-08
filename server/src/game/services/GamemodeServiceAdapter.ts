@@ -62,7 +62,7 @@ export interface GamemodeServiceAdapterDeps {
     locationService?: LocationService;
     pathService?: PathService;
     queueHitsplat?: (evt: HitsplatBroadcast) => void;
-    players?: Pick<PlayerManager, "addBot" | "removeBot" | "startBotCombat">;
+    players?: Pick<PlayerManager, "addBot" | "removeBot" | "startBotCombat" | "stopPlayerCombat">;
     /** Bots queue their clicks (Wield, Eat, Drink...) as actions, as people do: they need a queue. */
     actionScheduler?: { registerPlayer(player: PlayerState): void; unregisterPlayer(playerId: number): void };
     useInventoryItem?: (player: PlayerState, payload: { slot: number; itemId: number; option: string }) => void;
@@ -180,6 +180,13 @@ export function buildGamemodeServices(deps: GamemodeServiceAdapterDeps): Gamemod
         },
         castSpellOnPlayer: (caster, target, spellId) => deps.castSpellOnPlayer?.(caster, target, spellId),
         attackPlayer: (attacker, target) => deps.players?.startBotCombat(attacker, target) ?? false,
+        stopCombat: (player) => {
+            const sock = deps.getSocketByPlayerId(player.id);
+            if (sock) deps.players?.stopPlayerCombat(sock);
+            player.clearInteraction();
+            player.removeCombatTarget();
+            player.combat.setInteractingPlayer(null);
+        },
         getInterfaceService: () => deps.interfaceService,
         getCurrentTick: () => deps.getCurrentTick(),
         registerTickCallback: (callback) => deps.gamemodeTickCallbacks.push(callback),

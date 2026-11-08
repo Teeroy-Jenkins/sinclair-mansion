@@ -174,6 +174,7 @@ export class PvpCombatHandler {
         this.services.closeInterruptibleInterfaces(target);
         // Being attacked interrupts weak queue tasks (e.g. Home Teleport)
         target.interruptWeakQueues();
+        target.gamemode.onPlayerHit?.(player, target);
 
         this.services.log(
             "info",

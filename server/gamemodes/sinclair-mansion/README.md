@@ -112,7 +112,10 @@ remembered in the browser.
    on now (its name, then its next step and where). Run energy is topped up at the start of
    every round.
 3. **The grandfather clock strikes.** The dining room's grandfather clock chimes, the screen
-   fades to black ("*DONG* ... The grandfather clock strikes.") and everyone freezes. Each
+   fades to black ("*DONG* ... The grandfather clock strikes.") and everyone freezes. Every
+   fight is broken off there and then, and stays off: a blow still in the air doesn't start
+   another (nobody auto-retaliates until the next investigation; `onPlayerHit`,
+   `mayRetaliateAgainstPlayer`). Each
    player may **Ring** the clock once per game to end the investigation early (bots do it when
    they see dragon claws and have nothing to fight with). OSRS has no grandfather clock sound,
    so its bell peal (sound 932) stands in.
@@ -523,7 +526,10 @@ fate, the richest player, and your coin total.
 * **Bots handle weapons.** The household picks up a red herring lying in sight (never the
   revealed murder weapon: their prints would go on it), wields it when it feels in danger (a death,
   claws, a fight; the brave always) and puts it away once things are calm. Brave, armed bots
-  defend whoever is being attacked; the rest raise the alarm and run for the clock. The Detective
+  defend whoever is being attacked; the rest raise the alarm and run for the clock. A bot only
+  notices a fight once a blow (or a miss) actually lands: clicking Attack on someone and walking
+  away before the swing goes unseen (the engine's `onPlayerHit` hook; bots remember a swing for
+  10 ticks). The Detective
   bags any weapon on the floor as evidence. Bots pick up items from the floor at most once every
   2 ticks (`C.bots.pickupEveryTicks`), the dead Detective's kit one piece at a time.
 * **Bots fight fairly**, a reaction time late and one action at a time (`combatThink` in

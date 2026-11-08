@@ -1918,6 +1918,7 @@ export class CombatHitProcessor {
 
         if (source instanceof PlayerState) {
             source.setLastHit(target);
+            if (target instanceof PlayerState) target.gamemode.onPlayerHit?.(source, target);
         }
     }
 

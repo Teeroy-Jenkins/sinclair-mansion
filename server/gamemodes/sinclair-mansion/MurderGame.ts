@@ -320,6 +320,8 @@ export interface GameIO {
     chime(): void;
     /** Break off any fight they're in. */
     stopCombat(p: Participant): void;
+    /** They have someone as their combat target (they're fighting, or on their way to). */
+    inCombat(p: Participant): boolean;
     /** Take everything worn and carried except coins, chore tools and weapons from the pool. */
     takeKit(p: Participant): number[];
     /** Put kit items on (worn items go back on, the rest into the inventory). */
@@ -533,6 +535,11 @@ export class MurderGame {
     phase: Phase = "lobby";
     round = 0;
     tick = 0;
+    /**
+     * The last swing each participant actually landed on someone (a hit or a miss), by key.
+     * Clicking Attack doesn't count until the blow (or the spell) reaches them.
+     */
+    readonly swings = new Map<string, { victim: string; tick: number }>();
     phaseStart = 0;
     phaseEnds = 0;
     hostKey: string | undefined;
@@ -1235,6 +1242,7 @@ export class MurderGame {
         this.setPhase("freeze", C.round.freezeSec);
         for (const p of this.participants.values()) {
             p.fade = undefined; // the clock's own fade takes over
+            this.swings.delete(p.key);
             this.cancel(p);
             this.io.stopCombat(p);
             if (p.alive) this.io.setFrozen(p, true);
@@ -1598,13 +1606,39 @@ export class MurderGame {
         this.io.message(p, "You pick up the Detective's flypaper. You are the DETECTIVE now: use it on the body for clues and on furniture or people to lift prints, and once a round you can Stop and Search someone. Nobody else has been told.");
     }
 
+    /** A blow (or a miss) from `attacker` has just reached `victim`. */
+    swingLanded(attacker: Participant, victim: Participant): void {
+        if (attacker === victim) return;
+        this.swings.set(attacker.key, { victim: victim.key, tick: this.tick });
+    }
+
+    /** Who `p` has actually struck at in the last `withinTicks` ticks, if they're still alive. */
+    struckRecently(p: Participant, withinTicks: number): Participant | undefined {
+        const s = this.swings.get(p.key);
+        if (!s || this.tick - s.tick > withinTicks) return undefined;
+        const v = this.participants.get(s.victim);
+        return v?.alive ? v : undefined;
+    }
+
+    /** Fights only happen during the investigation (and the lobby's brawls). */
+    get fightingAllowed(): boolean {
+        return this.phase === "investigation" || this.phase === "lobby" || this.phase === "gameover";
+    }
+
+    /** Nobody fights once the clock has struck: break off any fight that started up again. */
+    private keepThePeace(): void {
+        for (const p of this.participants.values()) if (this.io.inCombat(p)) this.io.stopCombat(p);
+    }
+
     private lineUp(): void {
         // Everyone takes a seat; the head of the table is just another chair, so seating never
         // gives away who has the flypaper.
         const seats = [...this.layout.seats, this.layout.detectiveSpot];
         let i = 0;
+        this.swings.clear();
         for (const p of this.participants.values()) {
             this.cancel(p);
+            this.io.stopCombat(p); // nobody carries a fight to the dinner table
             if (!p.alive) continue;
             this.io.teleport(p, seats[i++ % seats.length]);
         }
@@ -1619,6 +1653,7 @@ export class MurderGame {
             else this.updateIntro();
             return;
         }
+        if (!this.fightingAllowed) this.keepThePeace();
         if (this.botThink) for (const p of this.participants.values()) if (p.isBot) this.botThink(this, p);
         if (this.phase === "investigation") {
             for (const p of this.participants.values()) if (p.action) this.progress(p);

@@ -157,6 +157,8 @@ export interface GamemodeServerServices {
     castSpellOnPlayer(caster: PlayerState, target: PlayerState, spellId: number): void;
     /** Attack a player, through the same checks as clicking Attack on them. */
     attackPlayer(attacker: PlayerState, target: PlayerState): boolean;
+    /** Break off any fight this player (person or bot) is in, as if they had walked away. */
+    stopCombat?(player: PlayerState): void;
     getCurrentTick(): number;
     registerTickCallback(callback: (tick: number) => void): void;
     eventBus: GameEventBus;
@@ -229,6 +231,14 @@ export interface GamemodeDefinition {
     canInteractWithLoc?(player: PlayerState, locId: number, option: string): boolean;
     /** PvP outside the Wilderness: return false (with a reason message) to refuse an attack. */
     canAttackPlayer?(attacker: PlayerState, target: PlayerState): boolean;
+    /**
+     * A player's attack on another player was resolved: a hit or a miss (a splash) has landed
+     * on `target`. Clicking Attack or walking up to someone doesn't call this; only a swing,
+     * shot or spell that actually reaches them does.
+     */
+    onPlayerHit?(attacker: PlayerState, target: PlayerState): void;
+    /** Return false to stop a player auto-retaliating against another player (e.g. a truce). */
+    mayRetaliateAgainstPlayer?(defender: PlayerState): boolean;
     /**
      * Rename an NPC menu option by op number (e.g. make op 2 "Attack" on an NPC whose cache
      * type has none). Return undefined to keep the cache option.

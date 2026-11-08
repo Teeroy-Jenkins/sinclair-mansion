@@ -39,8 +39,10 @@ export interface BotMover {
     /** Attack someone, person or bot, as clicking Attack on them would. */
     attack(p: Participant, target: Participant): boolean;
     hitpoints(p: Participant): { now: number; max: number };
-    /** The living whose combat target is this bot. */
+    /** The living who have just swung at this bot (a hit or a miss, not only a click on Attack). */
     attackers(p: Participant): Participant[];
+    /** Whom this participant has just swung at (a blow or a miss that reached them), if anyone. */
+    struck(p: Participant): Participant | undefined;
     /** Who this participant (bot or person) is attacking, if anyone. */
     target(p: Participant): Participant | undefined;
     /** Wield a carried weapon (the inventory's Wield). */
@@ -412,7 +414,8 @@ export function createBotBrain(mover: BotMover) {
                 b.sawWield.set(q.name, w.name);
                 if (innocent && chance(0.35 * b.persona.chatty)) say(game, p, b, LINES.sawWielding(q.name, w.name), { reply: true });
             }
-            const t = mover.target(q);
+            // Only a blow that lands (or misses) gives a fight away, not a click on Attack.
+            const t = mover.struck(q);
             if (!t || t === q || !t.alive || t === p) continue;
             // The Detective breaking up a fight isn't the one to watch.
             if (game.isDetective(q) && mover.target(t)) continue;

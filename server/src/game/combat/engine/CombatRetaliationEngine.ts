@@ -61,6 +61,14 @@ export class CombatRetaliationEngine {
         if (defender instanceof PlayerState && defender.hasPath()) {
             return false;
         }
+        // The gamemode may call a truce between players (e.g. everyone summoned to dinner).
+        if (
+            defender instanceof PlayerState &&
+            attackerReference.type === "player" &&
+            defender.gamemode.mayRetaliateAgainstPlayer?.(defender) === false
+        ) {
+            return false;
+        }
 
         defender.combatAttributes.set(CombatAttributes.COMBAT_TARGET, attackerReference);
         const result = this.interactionProcessor.process(

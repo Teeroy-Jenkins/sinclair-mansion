@@ -145,6 +145,7 @@ function makeWorld(opts: { humans?: string[]; pickFirst?: boolean; keepIntro?: b
             chimes.n++;
         },
         stopCombat: () => {},
+        inCombat: () => false,
         takeKit: (p) => {
             const kit = [...(worn.get(p.key) ?? []), ...(items.get(p.key) ?? []).filter((id) => id === ITEMS.flypaper || id === C.pvp.dragonClaws)];
             worn.set(p.key, []);
@@ -184,6 +185,7 @@ function makeWorld(opts: { humans?: string[]; pickFirst?: boolean; keepIntro?: b
         hitpoints: () => ({ now: 10, max: 10 }),
         attackers: () => [],
         target: () => undefined,
+        struck: () => undefined,
         wield: (p, id) => {
             if (!(items.get(p.key) ?? []).includes(id)) return false;
             wielded.set(p.key, id);
@@ -1862,6 +1864,58 @@ check("at the table every bot waits 12-20 seconds before its first vote (and may
         assert.ok(first.get(b.key)! - start >= ticksFor(lo) - 1, `${b.name} voted early`);
         assert.ok(first.get(b.key)! - start <= ticksFor(hi), `${b.name} voted late`);
     }
+});
+
+check("when the clock strikes, every fight is broken off and stays broken off at the table", () => {
+    const w = makeWorld({ humans: ["Host"] });
+    w.game.start("p:Host", 4);
+    assert.equal(w.game.phase, "investigation");
+    const fighting = new Set<string>([...w.game.participants.keys()]);
+    const io = w.game.io as unknown as Record<string, unknown>;
+    io.inCombat = (p: Participant) => fighting.has(p.key);
+    io.stopCombat = (p: Participant) => void fighting.delete(p.key);
+    // Fights are left alone during the investigation...
+    w.game.update();
+    assert.equal(fighting.size, w.game.participants.size, "no truce before the clock");
+    assert.equal(w.game.fightingAllowed, true);
+    // ...the clock strikes and everyone is pulled out of them.
+    w.game.phaseEnds = w.game.tick + 1;
+    w.game.update();
+    assert.equal(w.game.phase, "freeze");
+    assert.equal(w.game.fightingAllowed, false);
+    assert.equal(fighting.size, 0, "the freeze stops every fight");
+    // A blow still in the air starts one up again: it is broken off on the next tick.
+    const host = w.game.participants.get("p:Host")!;
+    fighting.add(host.key);
+    w.game.update();
+    assert.ok(!fighting.has(host.key), "a fight started during the freeze is stopped");
+    // And seated at the table, nobody carries a fight on.
+    run(w.game, 2 + ticksFor(C.round.freezeSec));
+    assert.equal(w.game.phase, "arrest");
+    fighting.add(host.key);
+    w.game.update();
+    assert.ok(!fighting.has(host.key), "a fight at the table is stopped");
+});
+
+check("bots only react to a blow that lands (or misses), not to a click on Attack", () => {
+    const w = makeWorld({ humans: ["Host"] });
+    w.game.start("p:Host", 4);
+    const host = w.game.participants.get("p:Host")!;
+    const bot = [...w.game.participants.values()].find((p) => p.isBot)!;
+    // Clicking Attack and walking away: no swing recorded.
+    assert.equal(w.game.struckRecently(host, 10), undefined);
+    // The swing reaches them: remembered for a while, then forgotten.
+    w.game.swingLanded(host, bot);
+    assert.equal(w.game.struckRecently(host, 10), bot);
+    w.game.tick += 11;
+    assert.equal(w.game.struckRecently(host, 10), undefined, "an old swing is forgotten");
+    // A bot watching only sees a fight through a landed swing: a combat target alone is ignored.
+    const mover = w.mover as unknown as Record<string, unknown>;
+    mover.target = (p: Participant) => (p === host ? bot : undefined);
+    const before = w.said.length;
+    run(w.game, 6);
+    const lines = w.said.slice(before);
+    assert.ok(!lines.some((l) => l.includes(host.name) && /attack/i.test(l)), lines.join(" | "));
 });
 
 console.log(`\n${passed} sinclair-mansion checks passed.`);

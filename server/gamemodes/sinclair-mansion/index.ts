@@ -140,6 +140,8 @@ export function dialogPages(paragraphs: string[], perLine = DIALOG_LINE_CHARS, p
 }
 /** OSRS's "Player 'Attack' options" varp: 1 = always right-click, 2 = left-click where available. */
 const VARP_PLAYER_ATTACK_OPTION = 1107;
+/** How long a bot remembers a blow it saw land (or felt): about two slow weapon swings (6 s). */
+const SWING_MEMORY_TICKS = 10;
 const ATTACK_RIGHT_CLICK = 1;
 const ATTACK_LEFT_CLICK = 2;
 const INVENTORY_SLOTS = 28;
@@ -443,6 +445,19 @@ class SinclairMansionGamemode extends SinclairBase {
         const why = game.canAttack(a, t);
         if (why) this.services?.messaging.sendGameMessage(attacker, why);
         return !why;
+    }
+
+    /** A blow or a miss actually reached someone: the bots react to that, not to a click on Attack. */
+    onPlayerHit(attacker: PlayerState, target: PlayerState): void {
+        const game = this.getGameForPlayer(attacker);
+        const a = game?.participants.get(this.keyOf(attacker));
+        const t = game?.participants.get(this.keyOf(target));
+        if (game && a && t) game.swingLanded(a, t);
+    }
+
+    /** Once the clock has struck nobody fights back: a blow still in the air doesn't start a new fight. */
+    mayRetaliateAgainstPlayer(defender: PlayerState): boolean {
+        return this.getGameForPlayer(defender)?.fightingAllowed ?? true;
     }
 
     /** The grandfather clock has no options in the cache: op 1 strikes it (ends the round early). */
@@ -1236,14 +1251,13 @@ class SinclairMansionGamemode extends SinclairBase {
             return { now: a.skillSystem.getHitpointsCurrent(), max: a.skillSystem.getSkill(SkillId.Hitpoints).baseLevel };
         },
         attackers: (p) => {
-            const me = this.actor(p.key);
             const game = this.game;
-            if (!me || !game) return [];
-            return game.living().filter((q) => {
-                const t = this.actor(q.key)?.getCombatTarget();
-                return q !== p && t?.type === "player" && t.id === me.id;
-            });
+            if (!game) return [];
+            // Only someone who has actually swung at it (hit or miss): a click on Attack that
+            // was walked away from before the blow goes unnoticed.
+            return game.living().filter((q) => q !== p && game.struckRecently(q, SWING_MEMORY_TICKS) === p);
         },
+        struck: (p) => this.game?.struckRecently(p, SWING_MEMORY_TICKS),
         target: (p) => {
             const t = this.actor(p.key)?.getCombatTarget();
             const key = t?.type === "player" ? this.keyById.get(t.id) : undefined;
@@ -1695,9 +1709,12 @@ class SinclairMansionGamemode extends SinclairBase {
         stopCombat: (p) => {
             const player = this.actor(p.key);
             if (!player) return;
+            // Through the engine, so a person's attack (its interaction) is dropped too, not just the target.
+            this.hudServices?.stopCombat?.(player);
             player.clearInteraction();
             player.setCombatTarget(null);
         },
+        inCombat: (p) => !!this.actor(p.key)?.getCombatTarget(),
         takeKit: (p) => {
             const game = this.game;
             const player = this.actor(p.key);

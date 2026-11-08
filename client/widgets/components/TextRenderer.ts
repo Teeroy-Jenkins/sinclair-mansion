@@ -619,6 +619,45 @@ export function wrapTextToWidth(
     return out;
 }
 
+/**
+ * AbstractFont.drawLines resets the text colour once and then draws every line
+ * with the same tag state, so a <col>, <shad>, <u> or <str> opened on one line
+ * still applies on the next (a long blue chat message stays blue when it wraps).
+ * Each of our lines is parsed on its own, so re-open whatever tags were still
+ * open at the end of the previous line.
+ */
+export function carryMarkupAcrossLines(lines: string[]): string[] {
+    let col: string | null = null;
+    let shad: string | null = null;
+    let u: string | null = null;
+    let str = false;
+    const tagRe = /<([^<>]*)>/g;
+    const out: string[] = new Array(lines.length);
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        let prefix = "";
+        if (col) prefix += col;
+        if (shad) prefix += shad;
+        if (u) prefix += u;
+        if (str) prefix += "<str>";
+        out[i] = prefix + line;
+        tagRe.lastIndex = 0;
+        let m: RegExpExecArray | null;
+        while ((m = tagRe.exec(line))) {
+            const tag = m[1].toLowerCase();
+            if (tag.startsWith("col=") || tag.startsWith("color=")) col = m[0];
+            else if (tag === "/col" || tag === "/color") col = null;
+            else if (tag.startsWith("shad")) shad = m[0];
+            else if (tag === "/shad") shad = null;
+            else if (tag === "u" || tag.startsWith("u=")) u = m[0];
+            else if (tag === "/u") u = null;
+            else if (tag === "str") str = true;
+            else if (tag === "/str") str = false;
+        }
+    }
+    return out;
+}
+
 export function splitExplicitLineBreaks(text: string): string[] {
     return String(text)
         .replace(/<br\s*\/?\s*>/gi, "\n")
@@ -681,9 +720,10 @@ export function drawWrappedTextGL(
     const maxDescent = (font.maxDescent ?? 0) | 0;
     const autoWrap = shouldAutoWrapText(logicalH, resolvedLineHeight, maxAscent, maxDescent);
     // short text widgets disable automatic wrapping and only honor explicit <br>.
-    const lines = autoWrap
+    const rawLines = autoWrap
         ? wrapTextToWidth(text, Math.max(1, logicalW), measure)
         : splitExplicitLineBreaks(text);
+    const lines = useMarkup && rawLines.length > 1 ? carryMarkupAcrossLines(rawLines) : rawLines;
 
     const lineSegments: (TextSegment[] | null)[] = new Array(lines.length);
     const lineWidths: number[] = new Array(lines.length);

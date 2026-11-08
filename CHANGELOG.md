@@ -1,5 +1,12 @@
 # Patch notes
 
+## v0.3.2
+
+**Bug fixes**
+- A long chat message stays blue when it wraps onto a second line. The game drew each wrapped line on its own and forgot the message's colour, so the second line came out black. Like RuneScape's own chat, a colour (or shadow, underline or strikethrough) now carries on across lines.
+- When the grandfather clock strikes, every fight stops, and nobody carries one on at the dinner table. Before, a blow already on its way when the clock struck could set off an auto-retaliate, and the two kept fighting at the table. Fights are broken off when the clock strikes, again when everyone sits down, and on every tick until the next investigation, and nobody auto-retaliates in between.
+- Bots only react to a real attack: a hit or a miss that actually reaches someone. Clicking Attack on a player or bot and walking away before the swing no longer sets a bot Detective (or anyone else) on you. A bot that sees the blow land still steps in, raises the alarm or fights back as before.
+
 ## v0.3.1
 
 **Stop and Search needs a clue first**
