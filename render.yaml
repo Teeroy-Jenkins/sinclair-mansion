@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: sinclair-mansion
+    env: node
+    plan: starter
+    buildCommand: yarn install --frozen-lockfile && yarn --cwd server install --frozen-lockfile && yarn --cwd client install --frozen-lockfile && yarn --cwd client build
+    startCommand: cd server && SINCLAIR_ALLOW_REMOTE_CLIENT=1 npx tsx src/index.ts
+    healthCheckPath: /status
+    envVars:
+      - key: SINCLAIR_ALLOW_REMOTE_CLIENT
+        value: 1
+      - key: PORT
+        value: 43594

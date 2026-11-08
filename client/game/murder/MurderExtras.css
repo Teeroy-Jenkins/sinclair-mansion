@@ -1,0 +1,64 @@
+/* Shared OSRS text look: RS font with a 1px black shadow. */
+.mx-tooltip {
+    font-family: "OSRS Small", "RuneScape UF", Tahoma, sans-serif;
+    text-shadow: 1px 1px 0 #000;
+}
+
+.mx-white { color: #fff; }
+.mx-cyan { color: #00ffff; }
+.mx-yellow { color: #ffff00; }
+.mx-orange { color: #ff9040; }
+
+/* RuneLite Mouse Tooltips: a small dark box by the cursor. */
+.mx-tooltip-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.mx-tooltip {
+    position: absolute;
+    max-width: 320px;
+    padding: 3px 6px;
+    font-size: 16px;
+    line-height: 17px;
+    background: rgba(70, 61, 50, 0.85);
+    border: 1px solid rgb(56, 48, 35);
+    box-shadow: inset 0 0 0 1px rgba(90, 82, 69, 0.8);
+    white-space: nowrap;
+}
+
+
+/* RuneScape's quest hint arrow over the current chore step. */
+.mx-hint-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 11;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.mx-hint-arrow {
+    position: absolute;
+    width: 30px;
+    height: 38px;
+    line-height: 0;
+    filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.6));
+}
+
+/* Flash like the classic client: drawn only while loopCycle % 20 < 10 (50 cycles/s),
+   i.e. 200 ms on, 200 ms off, hard on/off with no fade. */
+.mx-hint-arrow svg {
+    animation: mx-hint-flash 400ms steps(1, end) infinite;
+}
+
+@keyframes mx-hint-flash {
+    0% {
+        visibility: visible;
+    }
+    50% {
+        visibility: hidden;
+    }
+}

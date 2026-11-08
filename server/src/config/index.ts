@@ -1,0 +1,42 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
+import { logger } from "../utils/logger";
+
+export interface ServerConfig {
+    host: string;
+    port: number;
+    tickMs: number;
+    serverName: string;
+    maxPlayers: number;
+    gamemode: string;
+    /** URL of the central matchmaking registry (empty = standalone). */
+    matchmakingUrl: string;
+}
+
+const portEnv = process.env.PORT?.trim();
+const tickMsEnv = process.env.TICK_MS?.trim();
+
+let serverName = "Local Development";
+let maxPlayers = 2047;
+let gamemode = "sinclair-mansion";
+try {
+    const raw = readFileSync(resolve(__dirname, "../../config.json"), "utf-8");
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.serverName === "string") serverName = parsed.serverName;
+    if (typeof parsed.maxPlayers === "number") maxPlayers = parsed.maxPlayers;
+    if (typeof parsed.gamemode === "string") gamemode = parsed.gamemode;
+} catch (err) {
+    logger.info("[config] failed to load config.json", err);
+}
+
+export const config: ServerConfig = {
+    // Bind all interfaces by default so LAN/mobile clients can reach the WS server.
+    host: process.env.HOST || "0.0.0.0",
+    port: portEnv ? parseInt(portEnv, 10) || 43594 : 43594, // classic RuneScape default port
+    tickMs: tickMsEnv ? parseInt(tickMsEnv, 10) || 600 : 600, // 0.6s tick
+    serverName: process.env.SERVER_NAME?.trim() || serverName,
+    maxPlayers,
+    gamemode: process.env.GAMEMODE || gamemode,
+    matchmakingUrl: process.env.SINCLAIR_MATCHMAKING_URL?.trim() ?? "",
+};

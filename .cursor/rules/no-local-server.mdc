@@ -1,0 +1,14 @@
+---
+description: Respect user's local server preferences — do not auto-start servers unless asked
+alwaysApply: true
+---
+
+# Local Runtime
+
+- Do **not** start the game server or client dev server automatically. Only start them when the user explicitly asks.
+- The user plays in an **external browser**. Do not open or drive the Cursor IDE browser for gameplay unless they ask.
+- When the user asks to start the server or client, use the documented commands from `README.md`:
+  - `yarn server` — start game server only
+  - `yarn client` — start web client only
+  - `yarn start` — start both together
+- Deploying to Vercel or the VPS is fine when asked; that is not the same as starting a local server.

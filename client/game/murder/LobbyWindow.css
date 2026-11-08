@@ -1,0 +1,311 @@
+/* The lobby window: an OSRS-style stone panel in the middle of the screen. */
+.lobby-window {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 12;
+    width: 380px;
+    max-width: calc(100% - 32px);
+    padding: 12px 16px 14px;
+    background: #3e3529;
+    border: 2px solid #1e1a14;
+    box-shadow: inset 0 0 0 2px #5a4f3e, 0 4px 18px rgba(0, 0, 0, 0.6);
+    font-family: "OSRS Small", "RuneScape UF", Tahoma, sans-serif;
+    font-size: 20px;
+    line-height: 22px;
+    color: #ff981f;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: auto;
+}
+
+.lw-title {
+    text-align: center;
+    font-family: "OSRS Bold", "RuneScape UF", Tahoma, sans-serif;
+    font-size: 22px;
+    color: #ff981f;
+}
+
+.lw-subtitle {
+    text-align: center;
+    color: #fff;
+    margin: 2px 0 10px;
+}
+
+.lw-form {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.lw-form label,
+.lw-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.lw-row span:last-child {
+    color: #fff;
+}
+
+.lw-form input[type="text"],
+.lw-form input[type="password"],
+.lw-form input:not([type]),
+.lw-form select {
+    flex: 0 0 200px;
+    font: inherit;
+    font-size: 18px;
+    color: #fff;
+    background: #2a241b;
+    border: 1px solid #1e1a14;
+    box-shadow: inset 0 0 0 1px #4a4133;
+    padding: 2px 6px;
+    text-shadow: none;
+}
+
+.lw-form input::placeholder {
+    color: #8a7f6e;
+}
+
+.lw-check {
+    justify-content: flex-start !important;
+    cursor: pointer;
+}
+
+.lw-check input {
+    width: 16px;
+    height: 16px;
+    accent-color: #ff981f;
+}
+
+.lw-form button {
+    font: inherit;
+    font-size: 19px;
+    color: #ff981f;
+    text-shadow: 1px 1px 0 #000;
+    background: linear-gradient(#5a4a32, #3a2f20);
+    border: 1px solid #1e1a14;
+    padding: 3px 6px;
+    cursor: pointer;
+}
+
+.lw-form button:hover:not(:disabled) {
+    color: #fff;
+}
+
+.lw-form button:disabled {
+    color: #7a6f5e;
+    cursor: default;
+}
+
+.lw-form .lw-primary {
+    color: #00ff00;
+    font-size: 21px;
+    margin-top: 4px;
+}
+
+.lw-lobby-name {
+    text-align: center;
+    color: #ffff00;
+    font-size: 21px;
+}
+
+.lw-players {
+    margin: 0;
+    padding: 4px 8px;
+    list-style: none;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid #1e1a14;
+    color: #fff;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.lw-host {
+    color: #ff981f;
+}
+
+/* In the lobby: docked top-left so the game stays playable around it. */
+.lobby-window.lw-docked {
+    top: 10px;
+    left: 10px;
+    transform: none;
+    width: 300px;
+    font-size: 18px;
+    line-height: 20px;
+    max-height: calc(100% - 20px);
+    overflow-y: auto;
+}
+
+.lw-menu {
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.lw-form .lw-big {
+    font-size: 26px;
+    padding: 10px;
+    color: #ffff00;
+}
+
+.lw-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.lw-buttons button {
+    flex: 1;
+}
+
+.lw-form .lw-small,
+.lw-small {
+    font: inherit;
+    font-size: 16px;
+    padding: 1px 6px;
+}
+
+/* The server browser: a scrolling list of games. */
+.lw-browser {
+    height: 220px;
+    overflow-y: scroll;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid #1e1a14;
+    scrollbar-color: #8a6f3e #2a241b;
+}
+
+.lw-server {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    color: #fff;
+}
+
+.lw-server:hover {
+    background: rgba(255, 152, 31, 0.12);
+}
+
+.lw-server.lw-selected {
+    background: rgba(255, 152, 31, 0.28);
+}
+
+.lw-server.lw-full {
+    color: #9a8f7e;
+}
+
+.lw-server-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lw-server-count {
+    color: #ffff00;
+}
+
+.lw-server-info {
+    grid-column: 1 / -1;
+    font-size: 15px;
+    line-height: 16px;
+    color: #c8c8c8;
+}
+
+.lw-empty {
+    padding: 16px 10px;
+}
+
+.lw-share {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid #1e1a14;
+    font-size: 15px;
+    line-height: 17px;
+}
+
+.lw-share-ok {
+    color: #00ff00;
+}
+
+.lw-share-warn {
+    color: #ffb84d;
+}
+
+.lw-share-row span:first-child {
+    color: #c8c8c8;
+}
+
+.lw-room-code {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    background: rgba(255, 152, 31, 0.12);
+    border: 1px solid #ff981f;
+    border-radius: 2px;
+}
+
+.lw-room-code span {
+    color: #ff981f;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.lw-copy-code {
+    color: #ff981f !important;
+    white-space: nowrap;
+}
+
+.lw-copy-code:hover {
+    color: #fff !important;
+}
+
+.lw-hint {
+    text-align: center;
+    font-size: 16px;
+    line-height: 17px;
+    color: #c8c8c8;
+}
+
+.lw-hint.lw-error {
+    color: #ff4444;
+}
+
+/* A warning that doesn't stop anything (e.g. the router port isn't open). */
+.lw-hint.lw-warn {
+    color: #ffcc66;
+}
+
+/* The invite codes: one row per way into the host's PC. */
+.lw-share {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.lw-share .lw-room-code span {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lw-secondary {
+    color: #ff981f !important;
+}
+
+/* Store and Bank, side by side. */
+.lw-store {
+    display: flex;
+    gap: 6px;
+}
+
+.lw-store button {
+    flex: 1;
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*",
+    "data/**/*",
+    "gamemodes/dev/quests/**/*",
+    "gamemodes/dev/widgets/questListData.ts",
+    "gamemodes/dev/widgets/questListUi.ts",
+    "../client/rs/**/*",
+    "../client/common/**/*"
+  ]
+}

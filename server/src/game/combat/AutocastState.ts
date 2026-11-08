@@ -1,0 +1,94 @@
+import {
+    VARBIT_AUTOCAST_DEFMODE,
+    VARBIT_AUTOCAST_SET,
+    VARBIT_AUTOCAST_SPELL,
+} from "../../../../client/common/vars";
+import type { PlayerState } from "../player";
+import { canWeaponAutocastSpell, getAutocastIndexFromSpellId } from "../spells/SpellDataProvider";
+import { CombatAttributes } from "./state/CombatAttributes";
+
+type AutocastSyncCallbacks = {
+    sendVarbit?: (player: PlayerState, varbitId: number, value: number) => void;
+    queueCombatState?: (player: PlayerState) => void;
+};
+
+function syncAutocastVarbit(
+    player: PlayerState,
+    varbitId: number,
+    value: number,
+    callbacks?: AutocastSyncCallbacks,
+): void {
+    player.varps.setVarbitValue(varbitId, value);
+    callbacks?.sendVarbit?.(player, varbitId, value);
+}
+
+export function clearAutocastState(
+    player: PlayerState,
+    callbacks: AutocastSyncCallbacks = {},
+): void {
+    player.setCombatSpell(null);
+    player.combatAttributes.set(CombatAttributes.AUTOCAST_SPELL_ID, null);
+    syncAutocastVarbit(player, VARBIT_AUTOCAST_SET, 0, callbacks);
+    syncAutocastVarbit(player, VARBIT_AUTOCAST_SPELL, 0, callbacks);
+    syncAutocastVarbit(player, VARBIT_AUTOCAST_DEFMODE, 0, callbacks);
+    callbacks.queueCombatState?.(player);
+}
+
+export function applyAutocastState(
+    player: PlayerState,
+    spellId: number,
+    autocastIndex: number,
+    isDefensive: boolean,
+    callbacks: AutocastSyncCallbacks = {},
+): void {
+    const synchronizedAutocastIndex =
+        getAutocastIndexFromSpellId(spellId) ?? Math.trunc(autocastIndex);
+    if (!(spellId > 0) || !(synchronizedAutocastIndex > 0)) {
+        clearAutocastState(player, callbacks);
+        return;
+    }
+
+    player.setCombatSpell(spellId);
+    player.combat.autocastEnabled = true;
+    player.combat.autocastMode = isDefensive ? "defensive_autocast" : "autocast";
+    player.combatAttributes.set(CombatAttributes.AUTOCAST_SPELL_ID, Math.trunc(spellId));
+
+    syncAutocastVarbit(player, VARBIT_AUTOCAST_SET, 1, callbacks);
+    syncAutocastVarbit(
+        player,
+        VARBIT_AUTOCAST_SPELL,
+        synchronizedAutocastIndex,
+        callbacks,
+    );
+    syncAutocastVarbit(player, VARBIT_AUTOCAST_DEFMODE, isDefensive ? 1 : 0, callbacks);
+    callbacks.queueCombatState?.(player);
+}
+
+export function restoreAutocastState(
+    player: PlayerState,
+    weaponItemId: number,
+    callbacks: AutocastSyncCallbacks = {},
+): void {
+    const spellId = player.combat.spellId ?? -1;
+    const autocastEnabled = !!player.combat.autocastEnabled;
+    const autocastIndex = spellId > 0 ? getAutocastIndexFromSpellId(spellId) : undefined;
+
+    if (!autocastEnabled || !(spellId > 0) || !(autocastIndex && autocastIndex > 0)) {
+        clearAutocastState(player, callbacks);
+        return;
+    }
+
+    const compatibility = canWeaponAutocastSpell(weaponItemId, spellId);
+    if (!compatibility.compatible) {
+        clearAutocastState(player, callbacks);
+        return;
+    }
+
+    applyAutocastState(
+        player,
+        spellId,
+        autocastIndex,
+        player.combat.autocastMode === "defensive_autocast",
+        callbacks,
+    );
+}

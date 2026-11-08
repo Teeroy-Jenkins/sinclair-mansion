@@ -1,0 +1,556 @@
+import { PRAYER_DEACTIVATE_SOUND_ID, type PrayerName } from "../../../../client/rs/prayer/prayers";
+import { SkillId } from "../../../../client/rs/skill/skills";
+import { logger } from "../../utils/logger";
+import type { ServerServices } from "../ServerServices";
+import type { ActionEffect } from "../actions/types";
+import { AttackType } from "../combat/AttackType";
+import { combatEffectApplicator } from "../combat/CombatEffectApplicator";
+import {
+    resolveNpcAttackRange as resolveNpcAttackRangeRule,
+    resolveNpcAttackType as resolveNpcAttackTypeRule,
+} from "../combat/CombatRules";
+import type { DamageType, DropEligibility } from "../combat/DamageTracker";
+import { damageTracker } from "../combat/DamageTracker";
+import { HITMARK_BLOCK, HITMARK_DAMAGE } from "../combat/HitEffects";
+import { isInWilderness, multiCombatSystem } from "../combat/MultiCombatZones";
+import { createCombatHitEvaluator } from "../combat/engine/CombatHitEvaluator";
+import type { CombatHitEvaluator } from "../combat/engine/CombatHitEvaluator";
+import type { CombatAttack } from "../combat/model/CombatAttack";
+import { npcCombatEntityRef, playerCombatEntityRef } from "../combat/model/CombatEntityRef";
+import { CombatAttributes } from "../combat/state/CombatAttributes";
+import { DropRollService } from "../drops/DropRollService";
+import { NpcDropRegistry } from "../drops/NpcDropRegistry";
+import type { NpcState } from "../npc";
+import type { PendingNpcDrop } from "../npcManager";
+import type { PlayerState } from "../player";
+import { OverheadType } from "../prayer/OverheadType";
+
+export const PROTECTION_PRAYER_MAP: Record<AttackType, PrayerName> = {
+    melee: "protect_from_melee",
+    ranged: "protect_from_missiles",
+    magic: "protect_from_magic",
+};
+
+export const NPC_PROTECTION_REDUCTION = 1.0;
+export const PVP_PROTECTION_REDUCTION = 0.4;
+
+export class CombatEffectService {
+    private npcDropRegistry?: NpcDropRegistry;
+    private npcDropRollService?: DropRollService;
+    private readonly hitEvaluator: CombatHitEvaluator;
+
+    constructor(private readonly svc: ServerServices) {
+        this.hitEvaluator = createCombatHitEvaluator(svc);
+    }
+
+    // ── Prayer Effects ──────────────────────────────────────────────
+
+    handlePrayerDepleted(player: PlayerState, opts: { message?: string } = {}): void {
+        const message =
+            opts.message ?? "You have run out of Prayer points, you need to recharge at an altar.";
+        this.svc.messagingService.queueChatMessage({
+            messageType: "game",
+            text: message,
+            targetPlayerIds: [player.id],
+        });
+        player.prayer.resetDrainAccumulator();
+        player.combatAttributes.set(CombatAttributes.PRAYER_POINTS_CURRENT, 0);
+        player.combatAttributes.set(
+            CombatAttributes.ACTIVE_OVERHEAD_PRAYER,
+            OverheadType.NONE,
+        );
+        const hadPrayers = (player.prayer.getActivePrayers()?.size ?? 0) > 0;
+        if (hadPrayers) {
+            this.svc.soundService.sendSound(player, PRAYER_DEACTIVATE_SOUND_ID);
+            player.prayer.clearActivePrayers();
+            this.svc.queueCombatState(player);
+        }
+    }
+
+    tryActivateRedemption(player: PlayerState): boolean {
+        if (!player.prayer.hasPrayerActive("redemption")) return false;
+        const currentHp = player.skillSystem.getHitpointsCurrent();
+        if (!(currentHp > 0)) return false;
+        const maxHp = player.skillSystem.getHitpointsMax();
+        const threshold = Math.max(1, Math.floor(maxHp / 10));
+        if (currentHp > threshold) return false;
+        const prayerSkill = player.skillSystem.getSkill(SkillId.Prayer);
+        const currentPrayer = Math.max(0, prayerSkill.baseLevel + prayerSkill.boost);
+        if (currentPrayer <= 0) return false;
+        const healAmount = Math.max(1, Math.floor(prayerSkill.baseLevel * 0.25));
+        if (!(healAmount > 0)) return false;
+        player.skillSystem.setSkillBoost(SkillId.Prayer, 0);
+        this.handlePrayerDepleted(player);
+        player.skillSystem.applyHitpointsHeal(healAmount);
+        return true;
+    }
+
+    applySmite(attacker: PlayerState, target: PlayerState, damage: number): void {
+        if (!(damage > 0)) return;
+        if (!attacker.prayer.hasPrayerActive("smite")) return;
+        const drain = Math.max(0, Math.floor(damage / 4));
+        if (!(drain > 0)) return;
+        target.skillSystem.adjustSkillBoost(SkillId.Prayer, -drain);
+        if (target.prayer.getPrayerLevel() <= 0) {
+            target.skillSystem.setSkillBoost(SkillId.Prayer, 0);
+            this.handlePrayerDepleted(target);
+        }
+    }
+
+    tryActivateRetribution(player: PlayerState, tick: number): void {
+        if (!player.prayer.hasPrayerActive("retribution")) return;
+        const prayerSkill = player.skillSystem.getSkill(SkillId.Prayer);
+        const baseDamage = Math.min(25, Math.max(1, Math.floor(prayerSkill.baseLevel * 0.25)));
+        if (!(baseDamage > 0)) return;
+
+        const playerX = player.tileX;
+        const playerY = player.tileY;
+        const playerLevel = player.level;
+
+        const npcManager = this.svc.npcManager;
+        if (npcManager) {
+            const nearbyNpcs = npcManager.getNearby(playerX, playerY, playerLevel, 1);
+            for (const npc of nearbyNpcs) {
+                const result = this.applyPlayerDamageToNpc(
+                    player,
+                    npc,
+                    baseDamage,
+                    HITMARK_DAMAGE,
+                    tick,
+                    "other",
+                    baseDamage,
+                );
+                if (!result) continue;
+                const activeFrame = this.svc.activeFrame;
+                if (activeFrame) {
+                    activeFrame.hitsplats.push({
+                        targetType: "npc",
+                        targetId: npc.id,
+                        damage: result.amount,
+                        style: result.style,
+                        sourceType: "player",
+                        sourcePlayerId: player.id,
+                        hpCurrent: result.hpCurrent,
+                        hpMax: result.hpMax,
+                    });
+                }
+            }
+        }
+
+        const players = this.svc.players;
+        if (players) {
+            players.forEach((_sock: unknown, target: PlayerState) => {
+                if (target.id === player.id) return;
+                if (target.level !== playerLevel) return;
+                const dx = Math.abs(target.tileX - playerX);
+                const dy = Math.abs(target.tileY - playerY);
+                if (dx > 1 || dy > 1) return;
+                const result = target.skillSystem.applyHitpointsDamage(baseDamage);
+                const activeFrame = this.svc.activeFrame;
+                if (activeFrame) {
+                    activeFrame.hitsplats.push({
+                        targetType: "player",
+                        targetId: target.id,
+                        damage: baseDamage,
+                        style: HITMARK_DAMAGE,
+                        sourceType: "player",
+                        sourcePlayerId: player.id,
+                        hpCurrent: result.current,
+                        hpMax: result.max,
+                    });
+                }
+            });
+        }
+
+        this.svc.broadcastService.enqueueSpotAnimation({
+            tick,
+            playerId: player.id,
+            spotId: 437,
+            delay: 0,
+        });
+    }
+
+    // ── Damage Application ──────────────────────────────────────────
+
+    applyProtectionPrayers(
+        target: PlayerState,
+        damage: number,
+        attackType: AttackType,
+        source: "npc" | "player",
+    ): number {
+        if (!(damage > 0)) return 0;
+        const prayer = PROTECTION_PRAYER_MAP[attackType];
+        if (!prayer || !target.prayer.hasPrayerActive(prayer)) return damage;
+        const reduction =
+            source === "npc" || target.protectionBlocksPlayers
+                ? NPC_PROTECTION_REDUCTION
+                : PVP_PROTECTION_REDUCTION;
+        const remaining = Math.floor(damage * (1 - reduction));
+        return Math.max(0, remaining);
+    }
+
+    applyMultiTargetSpellDamage(opts: {
+        player: PlayerState;
+        primary: NpcState;
+        spell: {
+            id: number;
+            maxTargets?: number;
+            freezeDuration?: number;
+            impactSpotAnim?: number;
+            impactSpotAnimHeight?: number;
+            splashSpotAnim?: number;
+            poisonDamage?: number;
+        };
+        baseDamage: number;
+        style: number;
+        hitsplatTick: number;
+        currentTick: number;
+        effects: ActionEffect[];
+    }): number {
+        const npcManager = this.svc.npcManager;
+        if (
+            !npcManager ||
+            !opts.spell.maxTargets ||
+            opts.spell.maxTargets <= 1 ||
+            !(opts.baseDamage > 0)
+        ) {
+            return 0;
+        }
+        const extras = npcManager
+            .getNearby(opts.primary.tileX, opts.primary.tileY, opts.primary.level, 1)
+            .filter((npc: NpcState) => npc.id !== opts.primary.id);
+        if (extras.length === 0) return 0;
+        let remaining = Math.max(0, opts.spell.maxTargets - 1);
+        let totalSecondaryDamage = 0;
+        for (const extra of extras) {
+            if (remaining <= 0) break;
+            if (extra.isPlayerFollower?.() === true) continue;
+            if (extra.getHitpoints() <= 0 || extra.isDead(opts.currentTick)) continue;
+
+            let hitLanded = false;
+            let damage = 0;
+            try {
+                const attack: CombatAttack = Object.freeze({
+                    attacker: playerCombatEntityRef(opts.player.id),
+                    target: npcCombatEntityRef(extra.id),
+                    attackClock: opts.currentTick,
+                    traits: Object.freeze({
+                        type: AttackType.Magic,
+                        style: null,
+                        rangeTiles: 10,
+                        // A player's spell takes 5 ticks whatever they wield.
+                        speedTicks: 5,
+                        weaponId:
+                            opts.player.combat.weaponItemId > 0
+                                ? opts.player.combat.weaponItemId
+                                : undefined,
+                        spellId: opts.spell.id,
+                    }),
+                });
+                const result = this.hitEvaluator.evaluate(attack);
+                hitLanded = result.valid && result.landed;
+                damage = result.valid ? Math.max(0, result.damage) : 0;
+            } catch {
+                hitLanded = false;
+                damage = 0;
+            }
+
+            const result = this.applyPlayerDamageToNpc(
+                opts.player,
+                extra,
+                damage,
+                hitLanded ? opts.style : HITMARK_BLOCK,
+                opts.currentTick,
+                "magic",
+            );
+            if (!result) continue;
+            remaining--;
+            totalSecondaryDamage += result.amount;
+            const hpFields =
+                result.amount > 0 ? { hpCurrent: result.hpCurrent, hpMax: result.hpMax } : {};
+            opts.effects.push({
+                type: "hitsplat",
+                playerId: opts.player.id,
+                targetType: "npc",
+                targetId: extra.id,
+                damage: result.amount,
+                style: result.style,
+                sourceType: "player",
+                sourcePlayerId: opts.player.id,
+                tick: opts.hitsplatTick,
+                ...hpFields,
+            });
+            if (opts.spell.freezeDuration && result.amount > 0) {
+                extra.applyFreeze(opts.spell.freezeDuration, opts.currentTick);
+            }
+            if (opts.spell.poisonDamage && result.amount > 0) {
+                extra.inflictPoison(opts.spell.poisonDamage, opts.currentTick);
+            }
+            const spotId =
+                result.amount > 0
+                    ? (opts.spell.impactSpotAnim ?? opts.spell.splashSpotAnim)
+                    : (opts.spell.splashSpotAnim ?? opts.spell.impactSpotAnim);
+            if (spotId !== undefined && spotId >= 0) {
+                this.svc.broadcastService.enqueueSpotAnimation({
+                    tick: opts.hitsplatTick,
+                    npcId: extra.id,
+                    spotId: spotId,
+                    delay: 0,
+                    height: result.amount > 0 ? (opts.spell.impactSpotAnimHeight ?? 100) : 100,
+                });
+            }
+        }
+        return totalSecondaryDamage;
+    }
+
+    applyPlayerDamageToNpc(
+        player: PlayerState,
+        npc: NpcState,
+        damage: number,
+        style: number,
+        tick: number,
+        damageType: DamageType,
+        maxHit?: number,
+    ): { amount: number; style: number; hpCurrent: number; hpMax: number } | undefined {
+        if (npc.isPlayerFollower?.() === true) return undefined;
+        if (npc.getHitpoints() <= 0 || npc.isDead(tick)) return undefined;
+
+        const proposedDamage = Math.max(0, Math.trunc(damage));
+        const hitpointsBefore = npc.getHitpoints();
+        const prevented =
+            proposedDamage >= hitpointsBefore &&
+            (this.svc.scriptRuntime?.runNpcPreDeath?.({
+                npc,
+                killer: player,
+                killerPlayerId: player.id,
+                tick,
+                hit: {
+                    proposedDamage,
+                    style,
+                    maxHit,
+                    hitpointsBefore,
+                    hitpointsAfter: Math.max(0, hitpointsBefore - proposedDamage),
+                    cause: "effect",
+                },
+            }) ?? false);
+        const appliedDamage = prevented ? Math.max(0, hitpointsBefore - 1) : proposedDamage;
+        const result = combatEffectApplicator.applyNpcHitsplat(
+            npc,
+            style,
+            appliedDamage,
+            tick,
+            maxHit,
+        );
+        if (result.amount > 0) {
+            damageTracker.recordDamage(player, npc, result.amount, damageType, tick);
+            multiCombatSystem.recordEngagement(player, npc, tick);
+        }
+        if (result.hpCurrent <= 0) {
+            this.handleNpcDeathOutsidePrimaryCombat(player, npc, tick);
+        }
+        return result;
+    }
+
+    // ── NPC Death ───────────────────────────────────────────────────
+
+    handleNpcDeathOutsidePrimaryCombat(player: PlayerState, npc: NpcState, tick: number): void {
+        if (npc.isPlayerFollower?.() === true || npc.isDead(tick)) {
+            return;
+        }
+        // Defer to the canonical death pipeline: NPCs process fatal damage on
+        // their next turn, one tick after the killing hitsplat.
+        this.svc.npcManager?.scheduleDeathProcessing(npc.id, player.id, tick + 1);
+    }
+
+    // ── NPC Combat Resolution ───────────────────────────────────────
+
+    resolveNpcAttackType(npc: NpcState, explicit?: AttackType): AttackType {
+        return resolveNpcAttackTypeRule(npc, explicit);
+    }
+
+    resolveNpcAttackRange(npc: NpcState, attackType: AttackType): number {
+        return resolveNpcAttackRangeRule(npc, attackType);
+    }
+
+    getDistanceToNpcBounds(player: PlayerState, npc: NpcState): number {
+        const px = player.tileX;
+        const py = player.tileY;
+        const minX = npc.tileX;
+        const minY = npc.tileY;
+        const size = Math.max(1, npc.size);
+        const maxX = minX + size - 1;
+        const maxY = minY + size - 1;
+        const clampedX = Math.max(minX, Math.min(px, maxX));
+        const clampedY = Math.max(minY, Math.min(py, maxY));
+        return Math.max(Math.abs(clampedX - px), Math.abs(clampedY - py));
+    }
+
+    computeNpcHitDelay(
+        npc: NpcState,
+        player: PlayerState,
+        attackType: AttackType,
+        _attackSpeed: number,
+    ): number {
+        const distance = this.getDistanceToNpcBounds(player, npc);
+        switch (attackType) {
+            case AttackType.Magic:
+                return Math.max(1, 1 + Math.floor((1 + distance) / 3));
+            case AttackType.Ranged:
+                return Math.max(1, 1 + Math.floor((3 + distance) / 6));
+            case AttackType.Melee:
+            default:
+                // Melee hits resolve on the swing tick itself.
+                return 0;
+        }
+    }
+
+    pickNpcAttackSpeed(npc: NpcState, _player?: PlayerState): number {
+        const paramSpeed = this.svc.combatDataService.getNpcParamValue(npc, 14);
+        if (paramSpeed !== undefined && paramSpeed > 0) {
+            return Math.max(1, paramSpeed);
+        }
+        return 4;
+    }
+
+    pickNpcHitDelay(npc: NpcState, _player: PlayerState, _attackSpeed: number): number {
+        const paramHitDelay = this.svc.combatDataService.getNpcParamValue(npc, 286);
+        if (paramHitDelay !== undefined && paramHitDelay > 0) {
+            return Math.max(1, paramHitDelay);
+        }
+        const attackType = this.resolveNpcAttackType(npc);
+        return this.computeNpcHitDelay(npc, _player, attackType, _attackSpeed);
+    }
+
+    // ── NPC Animation ───────────────────────────────────────────────
+
+    broadcastNpcSequence(
+        npc: NpcState,
+        seqId: number | undefined,
+        opts?: { yieldToExisting?: boolean; delayCycles?: number },
+    ): void {
+        if (seqId === undefined || seqId < 0) return;
+        const frame = this.svc.activeFrame;
+        if (!frame) return;
+        const id = npc.id;
+        const seqDelay = Math.max(0, Math.min(255, Math.round(opts?.delayCycles ?? 0)));
+        const existing = frame.npcUpdates.find((d: { id?: number; seq?: number }) => d?.id === id);
+        if (existing?.seq !== undefined && existing.seq >= 0) {
+            // Interruptible sequences (e.g. blocks) never replace a sequence
+            // already broadcast this tick - attack animations win over blocks.
+            if (opts?.yieldToExisting) return;
+            const existingPriority = this.getSeqForcedPriority(existing.seq);
+            const newPriority = this.getSeqForcedPriority(seqId);
+            if (newPriority >= existingPriority) {
+                existing.seq = seqId;
+                existing.seqDelay = seqDelay;
+            }
+        } else if (existing) {
+            existing.seq = seqId;
+            existing.seqDelay = seqDelay;
+        } else {
+            frame.npcUpdates.push({ id, seq: seqId, seqDelay });
+        }
+    }
+
+    estimateNpcDespawnDelayTicksFromSeq(seqId: number | undefined): number {
+        if (seqId === undefined || seqId < 0) return 1;
+        const loader = this.svc.dataLoaderService.getSeqTypeLoader();
+        if (!loader) return 1;
+        try {
+            const seq = loader.load(seqId);
+            if (!seq) return 1;
+            if (seq.isSkeletalSeq()) {
+                const dur = Math.max(1, seq.getSkeletalDuration?.() ?? 1);
+                return Math.max(1, Math.ceil(dur / 30));
+            }
+            const lengths = seq.frameLengths;
+            if (!lengths || lengths.length === 0) return 1;
+            let cycles = 0;
+            for (let i = 0; i < lengths.length; i++) {
+                let fl = lengths[i];
+                if (fl <= 0) fl = 1;
+                if (i === lengths.length - 1 && fl >= 200) continue;
+                cycles += fl;
+            }
+            return Math.max(1, Math.ceil(cycles / 30));
+        } catch {
+            return 1;
+        }
+    }
+
+    getSeqForcedPriority(seqId: number): number {
+        return this.svc.dataLoaderService.getSeqTypeLoader()?.load?.(seqId)?.forcedPriority ?? 5;
+    }
+
+    // ── NPC Drops ───────────────────────────────────────────────────
+
+    getNpcDropRollService(): DropRollService | undefined {
+        const npcTypeLoader = this.svc.npcTypeLoader;
+        if (!this.npcDropRollService && npcTypeLoader) {
+            this.npcDropRegistry = new NpcDropRegistry(npcTypeLoader);
+            this.npcDropRollService = new DropRollService(this.npcDropRegistry);
+        }
+        return this.npcDropRollService;
+    }
+
+    rollNpcDrops(npc: NpcState, eligibility: DropEligibility | undefined): PendingNpcDrop[] {
+        const service = this.getNpcDropRollService();
+        if (!service) return [];
+        const recipients: Array<{
+            ownerId?: number;
+            player?: PlayerState;
+            dropRateMultiplier: number;
+        }> = [];
+        const seen = new Set<number>();
+        const gamemode = this.svc.gamemode;
+        for (const looter of eligibility?.eligibleLooters ?? []) {
+            const playerId = looter.id;
+            if (seen.has(playerId)) continue;
+            seen.add(playerId);
+            recipients.push({
+                ownerId: playerId,
+                player: looter,
+                dropRateMultiplier: gamemode.getDropRateMultiplier(looter),
+            });
+        }
+        if (
+            recipients.length === 0 &&
+            eligibility?.primaryLooter &&
+            !seen.has(eligibility.primaryLooter.id)
+        ) {
+            recipients.push({
+                ownerId: eligibility.primaryLooter.id,
+                player: eligibility.primaryLooter,
+                dropRateMultiplier: gamemode.getDropRateMultiplier(eligibility.primaryLooter),
+            });
+        }
+        if (recipients.length === 0) {
+            recipients.push({
+                ownerId: undefined,
+                player: undefined,
+                dropRateMultiplier: 1,
+            });
+        }
+        const npcTypeLoader = this.svc.npcTypeLoader;
+        let npcName = "";
+        try {
+            npcName = npcTypeLoader?.load(npc.typeId)?.name ?? "";
+        } catch (err) {
+            logger.warn("[drop] npc name lookup failed", err);
+        }
+        return service.roll({
+            npcTypeId: npc.typeId,
+            npcName,
+            tile: { x: npc.tileX, y: npc.tileY, level: npc.level },
+            isWilderness: isInWilderness(npc.tileX, npc.tileY),
+            recipients,
+            worldViewId: npc.worldViewId,
+            transformItemId: (
+                npcTypeId: number,
+                itemId: number,
+                recipient: { player?: PlayerState },
+            ) => gamemode.transformDropItemId(npcTypeId, itemId, recipient.player),
+            tableOverride: gamemode.getDropTable?.(npc.typeId),
+        });
+    }
+}

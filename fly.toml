@@ -1,0 +1,25 @@
+app = "sinclair-mansion"
+primary_region = "sea"
+
+[build]
+  builder = "nixpacks"
+  buildCommand = "yarn install --frozen-lockfile && yarn --cwd server install --frozen-lockfile && yarn --cwd client install --frozen-lockfile && yarn --cwd client build"
+
+[deploy]
+  start_command = "cd server && SINCLAIR_ALLOW_REMOTE_CLIENT=1 npx tsx src/index.ts"
+  health_check_path = "/status"
+
+[env]
+  SINCLAIR_ALLOW_REMOTE_CLIENT = "1"
+  PORT = "43594"
+
+[http_service]
+  internal_port = 43594
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  memory = "1gb"
+  cpu = "1 shared"

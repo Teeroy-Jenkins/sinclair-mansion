@@ -1,0 +1,39 @@
+{
+  "name": "@sinclair-mansion/server",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "yarn@4.12.0",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "@foxglove/wasm-bz2": "^0.3.0",
+    "bzip2": "^0.1.1",
+    "denque": "^2.1.0",
+    "gl-matrix": "^3.4.4",
+    "java-random": "^0.4.0",
+    "pako": "^2.1.0",
+    "ws": "^8.21.0"
+  },
+  "scripts": {
+    "start": "tsx scripts/ensure-cache.ts --server && npx cross-env SINCLAIR_NO_CLIENT=1 tsx src/index.ts",
+    "dev": "yarn start",
+    "build": "yarn typecheck",
+    "typecheck": "tsc --noEmit -p tsconfig.quests.json",
+    "build-collision": "tsx scripts/build-collision-cache.ts --include-models --force",
+    "build-npc-aggression": "tsx scripts/build-npc-aggression.ts",
+    "build-shops": "tsx scripts/build-shops.ts",
+    "ensure-cache": "tsx scripts/ensure-cache.ts --server",
+    "test": "tsx tests/authentication.test.ts && tsx tests/friends-chat.test.ts",
+    "test:sinclair": "tsx tests/sinclair-mansion.test.ts && tsx tests/door-swing-override.test.ts && tsx tests/combat-runescape-rules.test.ts && tsx tests/npc-floor-change.test.ts && tsx tests/appearance-kit-ids.test.ts && tsx tests/dragon-claws-floor.test.ts && tsx tests/sinclair-progression.test.ts && tsx tests/sinclair-store-and-gear.test.ts && tsx tests/sinclair-stamina.test.ts",
+    "typecheck:sinclair": "tsc --noEmit -p tsconfig.sinclair.json"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/node": "^25.9.2",
+    "@types/ws": "^8.18.1",
+    "adm-zip": "^0.5.17",
+    "tsx": "^4.22.4",
+    "typescript": "6.0.3"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "sinclair-mansion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "yarn@4.12.0",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "scripts": {
+    "setup": "yarn install --immutable && yarn --cwd server install --immutable && yarn --cwd client install --immutable && yarn --cwd server ensure-cache && yarn --cwd server build-collision",
+    "start": "yarn concurrently --kill-others --names server,client \"yarn --cwd server start\" \"yarn --cwd client start\"",
+    "server": "yarn --cwd server start",
+    "client": "yarn --cwd client start",
+    "build:web": "yarn --cwd client build && node tools/package/build-web.js",
+    "build:itch": "yarn --cwd client build && node tools/package/build-itch.js",
+    "build:zip": "node tools/package/build-zip.js"
+  },
+  "devDependencies": {
+    "adm-zip": "^0.5.17",
+    "concurrently": "^9.2.1"
+  }
+}

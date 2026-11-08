@@ -1,0 +1,66 @@
+/**
+ * Action handlers module.
+ *
+ * Contains specialized handlers for different action categories,
+ * extracted from wsServer for better organization and testability.
+ */
+
+export {
+    CombatActionHandler,
+    type CombatActionServices,
+    type ProjectileParams,
+    type ProjectileTiming,
+    type NpcCombatSequences,
+    type SpellCastRequest,
+    type HitPayload,
+    type SpecialAttackPayload,
+    type SpotAnimRequest,
+    type SoundRequest,
+    type ChatMessageRequest,
+    type ActionScheduleRequest,
+    type ActionScheduleResult,
+    type InteractionState,
+    type SkillSync,
+} from "./CombatActionHandler";
+
+export {
+    SpellActionHandler,
+    type SpellCastModifiers,
+    type SpellTargetKind,
+    type SpellCastTarget,
+    type SpellResultPayload,
+    type SpellDataEntry,
+    type PlayerAttackPlan,
+    type SpellCastContext,
+    type SpellValidationResult,
+    type SpellExecutionResult,
+    type SpellCastNpcPayload,
+    type SpellCastPlayerPayload,
+    type SpellCastLocPayload,
+    type SpellCastObjPayload,
+} from "./SpellActionHandler";
+
+export {
+    InventoryActionHandler,
+    type EquipResult,
+    type UnequipResult,
+    type ObjTypeInfo,
+} from "./InventoryActionHandler";
+
+export {
+    EffectDispatcher,
+    type HitsplatBroadcast,
+    type ForcedChatBroadcast,
+    type ForcedMovementBroadcast,
+    type LevelUpPopup,
+    type TickFrame,
+} from "./EffectDispatcher";
+export type { ProjectileLaunch } from "../../../../../client/common/projectiles/ProjectileLaunch";
+
+export {
+    WidgetDialogHandler,
+    type WidgetAction,
+    type ScriptDialogRequest,
+    type ScriptDialogOptionRequest,
+    type WidgetActionRequest,
+} from "./WidgetDialogHandler";

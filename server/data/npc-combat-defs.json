@@ -1,0 +1,4191 @@
+{
+  "$comment": "NPC combat definitions - server-side only. Client loads animations dynamically.",
+  "npcs": {
+    "100": {
+      "name": "Rock Crab",
+      "anims": {
+        "attack": 1312,
+        "block": 1313,
+        "death": 1314
+      },
+      "sounds": {
+        "death": 719
+      }
+    },
+    "102": {
+      "name": "Rock Crab",
+      "anims": {
+        "attack": 1312,
+        "block": 1313,
+        "death": 1314
+      },
+      "sounds": {
+        "death": 722
+      }
+    },
+    "655": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "656": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "657": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "658": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6199,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "659": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "660": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "661": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "662": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "663": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "664": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "665": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6199,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "667": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "668": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "1020": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "1021": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "1022": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "1061": {
+      "name": "Angry unicorn",
+      "anims": {
+        "attack": 6376,
+        "block": 6375,
+        "death": 6377
+      },
+      "sounds": {
+        "death": 877
+      }
+    },
+    "1062": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "1118": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "1173": {
+      "name": "Chicken",
+      "anims": {
+        "attack": 5387,
+        "block": 5388,
+        "death": 5389
+      }
+    },
+    "1174": {
+      "name": "Chicken",
+      "anims": {
+        "attack": 5387,
+        "block": 5388,
+        "death": 5389
+      }
+    },
+    "1679": {
+      "name": "Rat",
+      "anims": {
+        "attack": 240,
+        "block": 241,
+        "death": 243
+      }
+    },
+    "1680": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "1681": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "1682": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "1683": {
+      "name": "Crypt Spider",
+      "anims": {
+        "attack": 5327,
+        "block": 5328,
+        "death": 5329
+      }
+    },
+    "1684": {
+      "name": "Giant Crypt Spider",
+      "anims": {
+        "attack": 5319,
+        "block": 5320,
+        "death": 5321
+      }
+    },
+    "2245": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "2246": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "2247": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 7042
+      }
+    },
+    "2248": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "2249": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "2477": {
+      "name": "Giant Spider",
+      "anims": {
+        "attack": 5319,
+        "block": 5320,
+        "death": 5321
+      }
+    },
+    "2478": {
+      "name": "Spider",
+      "anims": {
+        "attack": 5327,
+        "block": 5328,
+        "death": 5329
+      }
+    },
+    "2479": {
+      "name": "Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "2480": {
+      "name": "Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "2484": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "2485": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "2486": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "2487": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "2488": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "2489": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "2492": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "2510": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2511": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2512": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2513": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "2693": {
+      "name": "Sheep",
+      "anims": {
+        "attack": 250,
+        "block": 251,
+        "death": 253
+      },
+      "sounds": {
+        "death": 763
+      }
+    },
+    "2804": {
+      "name": "Chicken",
+      "anims": {
+        "attack": 5387,
+        "block": 5388,
+        "death": 5389
+      }
+    },
+    "2805": {
+      "name": "Chicken",
+      "anims": {
+        "attack": 5387,
+        "block": 5388,
+        "death": 5389
+      }
+    },
+    "2806": {
+      "name": "Chicken",
+      "anims": {
+        "attack": 5387,
+        "block": 5388,
+        "death": 5389
+      }
+    },
+    "2837": {
+      "name": "Unicorn",
+      "anims": {
+        "attack": 6376,
+        "block": 6375,
+        "death": 6377
+      },
+      "sounds": {
+        "death": 3835
+      }
+    },
+    "2849": {
+      "name": "Black unicorn",
+      "anims": {
+        "attack": 6376,
+        "block": 6375,
+        "death": 6377
+      },
+      "sounds": {
+        "death": 3835
+      }
+    },
+    "2854": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      },
+      "sounds": {
+        "death": 711
+      }
+    },
+    "2855": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "2856": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2857": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2858": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2859": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2860": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2861": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2862": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2863": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2864": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2865": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2866": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "2867": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "3014": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3016": {
+      "name": "Shadow Spider",
+      "anims": {
+        "attack": 5327,
+        "block": 5328,
+        "death": 5329
+      }
+    },
+    "3017": {
+      "name": "Giant Spider",
+      "anims": {
+        "attack": 5319,
+        "block": 5320,
+        "death": 5321
+      }
+    },
+    "3018": {
+      "name": "Giant Spider",
+      "anims": {
+        "attack": 5319,
+        "block": 5320,
+        "death": 5321
+      }
+    },
+    "3019": {
+      "name": "Spider",
+      "anims": {
+        "attack": 5327,
+        "block": 5328,
+        "death": 5329
+      }
+    },
+    "3020": {
+      "name": "Jungle Spider",
+      "anims": {
+        "attack": 5327,
+        "block": 5328,
+        "death": 5329
+      }
+    },
+    "3021": {
+      "name": "Deadly Red Spider",
+      "anims": {
+        "attack": 5319,
+        "block": 5320,
+        "death": 5321
+      }
+    },
+    "3022": {
+      "name": "Ice Spider",
+      "anims": {
+        "attack": 5319,
+        "block": 5320,
+        "death": 5321
+      }
+    },
+    "3023": {
+      "name": "Poison Spider",
+      "anims": {
+        "attack": 5319,
+        "block": 5320,
+        "death": 5321
+      }
+    },
+    "3024": {
+      "name": "Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "3025": {
+      "name": "Poison Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "3026": {
+      "name": "Pit Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "3027": {
+      "name": "King Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "3028": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      },
+      "sounds": {
+        "death": 471
+      }
+    },
+    "3029": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      },
+      "sounds": {
+        "death": 471
+      }
+    },
+    "3030": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      },
+      "sounds": {
+        "death": 471
+      }
+    },
+    "3031": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      },
+      "sounds": {
+        "death": 471
+      }
+    },
+    "3032": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      },
+      "sounds": {
+        "death": 471
+      }
+    },
+    "3033": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      },
+      "sounds": {
+        "death": 471
+      }
+    },
+    "3034": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      },
+      "sounds": {
+        "death": 471
+      }
+    },
+    "3035": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      },
+      "sounds": {
+        "death": 471
+      }
+    },
+    "3036": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      },
+      "sounds": {
+        "death": 471
+      }
+    },
+    "3045": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "3046": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "3051": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "3052": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "3053": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "3054": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "3073": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "3074": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "3075": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "3076": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "3106": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3107": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3108": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3109": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3110": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3134": {
+      "name": "Imp",
+      "anims": {
+        "attack": 169,
+        "block": 170,
+        "death": 172
+      }
+    },
+    "3261": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3264": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3265": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3298": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3313": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "3314": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "3315": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "3316": {
+      "name": "Chicken",
+      "anims": {
+        "attack": 5387,
+        "block": 5388,
+        "death": 5389
+      }
+    },
+    "3607": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "3608": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "3609": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "3652": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "3910": {
+      "name": "Unicorn foal",
+      "anims": {
+        "attack": 6376,
+        "block": 6375,
+        "death": 6377
+      },
+      "sounds": {
+        "death": 3835
+      }
+    },
+    "3911": {
+      "name": "Black unicorn foal",
+      "anims": {
+        "attack": 6376,
+        "block": 6375,
+        "death": 6377
+      },
+      "sounds": {
+        "death": 3835
+      }
+    },
+    "3969": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "3970": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "3971": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "4000": {
+      "name": "Rat",
+      "anims": {
+        "attack": 240,
+        "block": 241,
+        "death": 243
+      }
+    },
+    "4270": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "4271": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "4534": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "4535": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "4594": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4595": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4610": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4611": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4612": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4613": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4614": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4615": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4616": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4617": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4618": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "4688": {
+      "name": "Angry unicorn",
+      "anims": {
+        "attack": 6376,
+        "block": 6375,
+        "death": 6377
+      },
+      "sounds": {
+        "death": 877
+      }
+    },
+    "4689": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "4690": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "4809": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "5007": {
+      "name": "Imp",
+      "anims": {
+        "attack": 169,
+        "block": 170,
+        "death": 172
+      }
+    },
+    "5192": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5193": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5195": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5196": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5197": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5198": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5199": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5200": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5201": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5202": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5203": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6184,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5204": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6188,
+        "block": 6189,
+        "death": 6190
+      }
+    },
+    "5205": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5206": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5207": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5208": {
+      "name": "Goblin",
+      "anims": {
+        "attack": 6185,
+        "block": 6183,
+        "death": 6182
+      }
+    },
+    "5228": {
+      "name": "Kharid Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "5229": {
+      "name": "Kharid Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "5230": {
+      "name": "Kharid Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "5242": {
+      "name": "Scorpion",
+      "anims": {
+        "attack": 6254,
+        "block": 6255,
+        "death": 6256
+      }
+    },
+    "5728": {
+      "name": "Imp",
+      "anims": {
+        "attack": 169,
+        "block": 170,
+        "death": 172
+      }
+    },
+    "6224": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "6225": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "6226": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "6227": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "6228": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "6229": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "6776": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "6793": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "6818": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "6987": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "6988": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "6989": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "7024": {
+      "name": "Reanimated unicorn",
+      "anims": {
+        "attack": 6376,
+        "block": 6375,
+        "death": 6377
+      },
+      "sounds": {
+        "death": 3835
+      }
+    },
+    "7223": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "7225": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "7281": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "7919": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "7920": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "8986": {
+      "name": "Unicorn",
+      "anims": {
+        "attack": 289,
+        "block": 290,
+        "death": 292
+      },
+      "sounds": {
+        "death": 3835
+      }
+    },
+    "9026": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "9029": {
+      "name": "Crystalline unicorn",
+      "anims": {
+        "attack": 6376,
+        "block": 6375,
+        "death": 6377
+      },
+      "sounds": {
+        "death": 4625
+      }
+    },
+    "9040": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "9043": {
+      "name": "Corrupted unicorn",
+      "anims": {
+        "attack": 6376,
+        "block": 6375,
+        "death": 6377
+      },
+      "sounds": {
+        "death": 4625
+      }
+    },
+    "9209": {
+      "name": "Unicorn",
+      "anims": {
+        "attack": 289,
+        "block": 290,
+        "death": 292
+      },
+      "sounds": {
+        "death": 3835
+      }
+    },
+    "9390": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "9391": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "9392": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "9394": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "9395": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "9396": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "9397": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "9483": {
+      "name": "Giant rat",
+      "anims": {
+        "attack": 4933,
+        "block": 4934,
+        "death": 4935
+      }
+    },
+    "9618": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "10682": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    },
+    "11057": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "11058": {
+      "name": "Man",
+      "anims": {
+        "attack": 422,
+        "block": 424,
+        "death": 836
+      },
+      "sounds": {
+        "death": 512
+      }
+    },
+    "11911": {
+      "name": "Guard",
+      "anims": {
+        "attack": 386,
+        "block": 1156
+      }
+    },
+    "11912": {
+      "name": "Guard",
+      "anims": {
+        "attack": 386,
+        "block": 1156
+      }
+    },
+    "11913": {
+      "name": "Guard",
+      "anims": {
+        "attack": 386,
+        "block": 1156
+      }
+    },
+    "11914": {
+      "name": "Guard",
+      "anims": {
+        "attack": 386,
+        "block": 1156
+      }
+    },
+    "11915": {
+      "name": "Guard",
+      "anims": {
+        "attack": 386,
+        "block": 1156
+      }
+    },
+    "11916": {
+      "name": "Guard",
+      "anims": {
+        "attack": 386,
+        "block": 1156
+      }
+    },
+    "11917": {
+      "name": "Guard",
+      "anims": {
+        "attack": 386,
+        "block": 1156
+      }
+    },
+    "13624": {
+      "name": "Rat",
+      "anims": {
+        "attack": 2705,
+        "block": 2706,
+        "death": 2707
+      }
+    }
+  },
+  "refs": {
+    "$comment": "Additional NPC combat sequences imported from curated cache-backed references and unambiguous skeleton sequence names. Manual entries above always win.",
+    "npcs": [
+      [
+        140,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        143,
+        3709,
+        3710,
+        3711
+      ],
+      [
+        260,
+        80,
+        89,
+        92
+      ],
+      [
+        261,
+        80,
+        89,
+        92
+      ],
+      [
+        262,
+        80,
+        89,
+        92
+      ],
+      [
+        263,
+        80,
+        89,
+        92
+      ],
+      [
+        264,
+        80,
+        89,
+        92
+      ],
+      [
+        373,
+        2371,
+        2372,
+        2373
+      ],
+      [
+        374,
+        2371,
+        2372,
+        2373
+      ],
+      [
+        417,
+        1546,
+        1547,
+        1548
+      ],
+      [
+        418,
+        1546,
+        1547,
+        1548
+      ],
+      [
+        419,
+        1562,
+        1560,
+        1563
+      ],
+      [
+        420,
+        1562,
+        1560,
+        1563
+      ],
+      [
+        423,
+        1557,
+        1555,
+        1558
+      ],
+      [
+        426,
+        1595,
+        1596,
+        1597
+      ],
+      [
+        427,
+        1595,
+        1596,
+        1597
+      ],
+      [
+        428,
+        1595,
+        1596,
+        1597
+      ],
+      [
+        429,
+        1595,
+        1596,
+        1597
+      ],
+      [
+        430,
+        1595,
+        1596,
+        1597
+      ],
+      [
+        431,
+        1595,
+        1596,
+        1597
+      ],
+      [
+        432,
+        1595,
+        1596,
+        1597
+      ],
+      [
+        433,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        434,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        435,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        436,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        437,
+        1586,
+        1585,
+        1587
+      ],
+      [
+        438,
+        1586,
+        1585,
+        1587
+      ],
+      [
+        439,
+        1586,
+        1585,
+        1587
+      ],
+      [
+        440,
+        1586,
+        1585,
+        1587
+      ],
+      [
+        441,
+        1586,
+        1585,
+        1587
+      ],
+      [
+        442,
+        1586,
+        1585,
+        1587
+      ],
+      [
+        448,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        449,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        450,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        451,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        452,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        453,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        454,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        455,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        456,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        457,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        471,
+        3326,
+        3325,
+        3327
+      ],
+      [
+        475,
+        1802,
+        1803,
+        1804
+      ],
+      [
+        476,
+        1802,
+        1803,
+        1804
+      ],
+      [
+        477,
+        1793,
+        1794,
+        1795
+      ],
+      [
+        478,
+        1793,
+        1794,
+        1795
+      ],
+      [
+        480,
+        1789,
+        1791,
+        1792
+      ],
+      [
+        513,
+        422,
+        424,
+        836
+      ],
+      [
+        880,
+        299,
+        300,
+        302
+      ],
+      [
+        973,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        974,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        975,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        979,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        983,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        984,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        985,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        986,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        987,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        988,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        1262,
+        5338,
+        5337,
+        5336
+      ],
+      [
+        1263,
+        5338,
+        5337,
+        5336
+      ],
+      [
+        1264,
+        5338,
+        5337,
+        5336
+      ],
+      [
+        1274,
+        1616,
+        1617,
+        1618
+      ],
+      [
+        1275,
+        1612,
+        1613,
+        1611
+      ],
+      [
+        1365,
+        1029,
+        1030,
+        1031
+      ],
+      [
+        1366,
+        4868,
+        4869,
+        4870
+      ],
+      [
+        1367,
+        4868,
+        4869,
+        4870
+      ],
+      [
+        1377,
+        1760,
+        1758,
+        1759
+      ],
+      [
+        1378,
+        1760,
+        1758,
+        1759
+      ],
+      [
+        1494,
+        5304,
+        5305,
+        5303
+      ],
+      [
+        1606,
+        128,
+        129,
+        131
+      ],
+      [
+        1689,
+        3891,
+        3890,
+        3888
+      ],
+      [
+        1690,
+        3891,
+        3890,
+        3888
+      ],
+      [
+        1691,
+        3891,
+        3890,
+        3888
+      ],
+      [
+        1692,
+        3891,
+        3890,
+        3888
+      ],
+      [
+        1693,
+        3891,
+        3890,
+        3888
+      ],
+      [
+        1694,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1695,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1696,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1697,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1698,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1699,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1700,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1701,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1702,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1703,
+        3901,
+        3902,
+        3903
+      ],
+      [
+        1704,
+        3915,
+        3916,
+        3917
+      ],
+      [
+        1705,
+        3915,
+        3916,
+        3917
+      ],
+      [
+        1706,
+        3915,
+        3916,
+        3917
+      ],
+      [
+        1707,
+        3915,
+        3916,
+        3917
+      ],
+      [
+        1708,
+        3915,
+        3916,
+        3917
+      ],
+      [
+        1709,
+        3908,
+        3909,
+        3910
+      ],
+      [
+        1710,
+        3908,
+        3909,
+        3910
+      ],
+      [
+        1711,
+        3908,
+        3909,
+        3910
+      ],
+      [
+        1712,
+        3908,
+        3909,
+        3910
+      ],
+      [
+        1713,
+        3908,
+        3909,
+        3910
+      ],
+      [
+        1714,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1715,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1716,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1717,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1718,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1719,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1720,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1721,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1722,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1723,
+        3882,
+        3880,
+        3881
+      ],
+      [
+        1724,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1725,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1726,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1727,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1728,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1729,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1730,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1731,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1732,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1733,
+        3920,
+        3921,
+        3922
+      ],
+      [
+        1834,
+        4300,
+        4301,
+        4302
+      ],
+      [
+        1861,
+        94,
+        95,
+        97
+      ],
+      [
+        1862,
+        94,
+        95,
+        97
+      ],
+      [
+        1863,
+        94,
+        95,
+        97
+      ],
+      [
+        1864,
+        94,
+        95,
+        97
+      ],
+      [
+        1865,
+        94,
+        95,
+        97
+      ],
+      [
+        1866,
+        94,
+        95,
+        97
+      ],
+      [
+        2019,
+        1760,
+        1758,
+        1759
+      ],
+      [
+        2046,
+        1741,
+        1742,
+        2408
+      ],
+      [
+        2063,
+        5669,
+        5670,
+        5671
+      ],
+      [
+        2075,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        2076,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        2077,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        2078,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        2079,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        2080,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        2081,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        2082,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        2083,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        2085,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        2086,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        2087,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        2088,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        2089,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        2090,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        2091,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        2092,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        2093,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        2094,
+        128,
+        129,
+        131
+      ],
+      [
+        2098,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        2099,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        2100,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        2101,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        2102,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        2103,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        2189,
+        2621,
+        2622,
+        2620
+      ],
+      [
+        2190,
+        2621,
+        2622,
+        2620
+      ],
+      [
+        2191,
+        2625,
+        2626,
+        2627
+      ],
+      [
+        2192,
+        2625,
+        2626,
+        2627
+      ],
+      [
+        2208,
+        7026,
+        7027,
+        7028
+      ],
+      [
+        2217,
+        6154,
+        6155,
+        6156
+      ],
+      [
+        2218,
+        6154,
+        6155,
+        6156
+      ],
+      [
+        2259,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        2593,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2594,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2595,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2596,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2597,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2598,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2599,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2600,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2601,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2602,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2603,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2604,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2605,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2606,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2607,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2608,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2609,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2610,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2611,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2612,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        2790,
+        5849,
+        5850,
+        5851
+      ],
+      [
+        2791,
+        5849,
+        5850,
+        5851
+      ],
+      [
+        2792,
+        5849,
+        5850,
+        5851
+      ],
+      [
+        2793,
+        5849,
+        5850,
+        5851
+      ],
+      [
+        2794,
+        5849,
+        5850,
+        5851
+      ],
+      [
+        2795,
+        5849,
+        5850,
+        5851
+      ],
+      [
+        2801,
+        5849,
+        5850,
+        5851
+      ],
+      [
+        2846,
+        255,
+        256,
+        258
+      ],
+      [
+        2847,
+        294,
+        295,
+        297
+      ],
+      [
+        2848,
+        220,
+        221,
+        223
+      ],
+      [
+        2916,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        2917,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        2946,
+        5989,
+        5988,
+        5990
+      ],
+      [
+        2947,
+        5989,
+        5988,
+        5990
+      ],
+      [
+        2948,
+        5989,
+        5988,
+        5990
+      ],
+      [
+        3010,
+        6489,
+        6488,
+        6490
+      ],
+      [
+        3011,
+        6489,
+        6488,
+        6490
+      ],
+      [
+        3012,
+        6489,
+        6488,
+        6490
+      ],
+      [
+        3013,
+        6489,
+        6488,
+        6490
+      ],
+      [
+        3111,
+        422,
+        425,
+        836
+      ],
+      [
+        3112,
+        422,
+        425,
+        836
+      ],
+      [
+        3113,
+        422,
+        425,
+        836
+      ],
+      [
+        3114,
+        433,
+        434,
+        836
+      ],
+      [
+        3116,
+        2621,
+        2622,
+        2620
+      ],
+      [
+        3117,
+        2621,
+        2622,
+        2620
+      ],
+      [
+        3118,
+        2625,
+        2626,
+        2627
+      ],
+      [
+        3119,
+        2625,
+        2626,
+        2627
+      ],
+      [
+        3120,
+        2625,
+        2626,
+        2627
+      ],
+      [
+        3123,
+        2637,
+        2635,
+        2638
+      ],
+      [
+        3124,
+        2637,
+        2635,
+        2638
+      ],
+      [
+        3125,
+        2644,
+        2645,
+        2646
+      ],
+      [
+        3126,
+        2644,
+        2645,
+        2646
+      ],
+      [
+        3128,
+        2637,
+        2635,
+        2638
+      ],
+      [
+        3135,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        3136,
+        6536,
+        6538,
+        6537
+      ],
+      [
+        3139,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        3140,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        3141,
+        4300,
+        4301,
+        4302
+      ],
+      [
+        3184,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        3185,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        3243,
+        433,
+        434,
+        836
+      ],
+      [
+        3244,
+        433,
+        434,
+        836
+      ],
+      [
+        3475,
+        6329,
+        6330,
+        6331
+      ],
+      [
+        3477,
+        6310,
+        6313,
+        6315
+      ],
+      [
+        3487,
+        18,
+        19,
+        20
+      ],
+      [
+        3527,
+        6489,
+        6488,
+        6490
+      ],
+      [
+        3851,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        3902,
+        1245,
+        1244,
+        1246
+      ],
+      [
+        3903,
+        1245,
+        1244,
+        1246
+      ],
+      [
+        3996,
+        255,
+        256,
+        258
+      ],
+      [
+        4005,
+        2731,
+        2732,
+        2733
+      ],
+      [
+        4067,
+        128,
+        129,
+        131
+      ],
+      [
+        4308,
+        3985,
+        3986,
+        3988
+      ],
+      [
+        4309,
+        3985,
+        3986,
+        3988
+      ],
+      [
+        4310,
+        3985,
+        3986,
+        3988
+      ],
+      [
+        4311,
+        3985,
+        3986,
+        3988
+      ],
+      [
+        4504,
+        2621,
+        2622,
+        2620
+      ],
+      [
+        4652,
+        49,
+        50,
+        52
+      ],
+      [
+        4742,
+        2917,
+        2918,
+        2919
+      ],
+      [
+        4743,
+        2917,
+        2918,
+        2919
+      ],
+      [
+        4744,
+        2917,
+        2918,
+        2919
+      ],
+      [
+        4797,
+        4829,
+        4831,
+        4830
+      ],
+      [
+        4813,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        4820,
+        3433,
+        3434,
+        3435
+      ],
+      [
+        4821,
+        3433,
+        3434,
+        3435
+      ],
+      [
+        4884,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        4885,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        4886,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        4887,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        4888,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        4889,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        4927,
+        6811,
+        6810,
+        6812
+      ],
+      [
+        5127,
+        6519,
+        6520,
+        6521
+      ],
+      [
+        5128,
+        6519,
+        6520,
+        6521
+      ],
+      [
+        5129,
+        6501,
+        6503,
+        6502
+      ],
+      [
+        5211,
+        390,
+        383,
+        836
+      ],
+      [
+        5500,
+        2371,
+        2372,
+        2373
+      ],
+      [
+        5502,
+        2371,
+        2372,
+        2373
+      ],
+      [
+        5563,
+        6726,
+        6728,
+        6727
+      ],
+      [
+        5564,
+        6726,
+        6728,
+        6727
+      ],
+      [
+        5565,
+        6726,
+        6728,
+        6727
+      ],
+      [
+        5566,
+        6726,
+        6728,
+        6727
+      ],
+      [
+        5644,
+        3731,
+        3732,
+        3733
+      ],
+      [
+        5645,
+        3731,
+        3732,
+        3733
+      ],
+      [
+        5739,
+        5097,
+        5096,
+        5098
+      ],
+      [
+        5740,
+        5097,
+        5096,
+        5098
+      ],
+      [
+        5741,
+        5097,
+        5096,
+        5098
+      ],
+      [
+        5742,
+        5097,
+        5096,
+        5098
+      ],
+      [
+        5743,
+        5097,
+        5096,
+        5098
+      ],
+      [
+        5744,
+        5097,
+        5096,
+        5098
+      ],
+      [
+        5745,
+        5097,
+        5096,
+        5098
+      ],
+      [
+        5746,
+        5097,
+        5096,
+        5098
+      ],
+      [
+        5747,
+        5097,
+        5096,
+        5098
+      ],
+      [
+        5779,
+        3312,
+        3311,
+        3310
+      ],
+      [
+        5842,
+        5849,
+        5850,
+        5851
+      ],
+      [
+        5848,
+        3262,
+        3260,
+        3263
+      ],
+      [
+        5853,
+        3262,
+        3260,
+        3263
+      ],
+      [
+        5854,
+        3262,
+        3260,
+        3263
+      ],
+      [
+        5916,
+        4522,
+        4523,
+        4521
+      ],
+      [
+        5938,
+        2365,
+        2366,
+        2367
+      ],
+      [
+        5939,
+        2365,
+        2366,
+        2367
+      ],
+      [
+        5942,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        5943,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        5944,
+        2859,
+        2860,
+        2862
+      ],
+      [
+        6121,
+        6329,
+        6330,
+        6331
+      ],
+      [
+        6272,
+        2397,
+        2399,
+        2398
+      ],
+      [
+        6273,
+        2397,
+        2399,
+        2398
+      ],
+      [
+        6297,
+        6501,
+        6503,
+        6502
+      ],
+      [
+        6299,
+        128,
+        129,
+        131
+      ],
+      [
+        6300,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6301,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6302,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6303,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6304,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6305,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6312,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6313,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6314,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6315,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6316,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6317,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6322,
+        1760,
+        1758,
+        1759
+      ],
+      [
+        6352,
+        6329,
+        6330,
+        6331
+      ],
+      [
+        6353,
+        3262,
+        3260,
+        3263
+      ],
+      [
+        6358,
+        6501,
+        6503,
+        6502
+      ],
+      [
+        6360,
+        128,
+        129,
+        131
+      ],
+      [
+        6361,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6362,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6363,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6364,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6365,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6366,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6373,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6374,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6375,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6376,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6377,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6378,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        6383,
+        1760,
+        1758,
+        1759
+      ],
+      [
+        6394,
+        255,
+        256,
+        258
+      ],
+      [
+        6402,
+        2397,
+        2399,
+        2398
+      ],
+      [
+        6477,
+        5617,
+        5618,
+        5619
+      ],
+      [
+        6499,
+        3312,
+        3311,
+        3310
+      ],
+      [
+        6593,
+        80,
+        89,
+        92
+      ],
+      [
+        6604,
+        304,
+        305,
+        307
+      ],
+      [
+        6624,
+        1040,
+        1042,
+        1041
+      ],
+      [
+        6803,
+        220,
+        221,
+        223
+      ],
+      [
+        7019,
+        220,
+        221,
+        223
+      ],
+      [
+        7031,
+        4234,
+        4232,
+        4233
+      ],
+      [
+        7033,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        7249,
+        1557,
+        1555,
+        1558
+      ],
+      [
+        7250,
+        2731,
+        2732,
+        2733
+      ],
+      [
+        7251,
+        4667,
+        4665,
+        4668
+      ],
+      [
+        7252,
+        4667,
+        4665,
+        4668
+      ],
+      [
+        7259,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        7260,
+        1341,
+        1340,
+        1342
+      ],
+      [
+        7261,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        7262,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        7268,
+        185,
+        186,
+        188
+      ],
+      [
+        7269,
+        185,
+        186,
+        188
+      ],
+      [
+        7277,
+        1586,
+        1585,
+        1587
+      ],
+      [
+        7388,
+        1592,
+        1591,
+        1590
+      ],
+      [
+        7390,
+        7547,
+        7546,
+        7548
+      ],
+      [
+        7391,
+        7547,
+        7546,
+        7548
+      ],
+      [
+        7393,
+        1562,
+        1560,
+        1563
+      ],
+      [
+        7394,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        7395,
+        1546,
+        1547,
+        1548
+      ],
+      [
+        7399,
+        1586,
+        1585,
+        1587
+      ],
+      [
+        7400,
+        1586,
+        1585,
+        1587
+      ],
+      [
+        7401,
+        4234,
+        4232,
+        4233
+      ],
+      [
+        7404,
+        1557,
+        1555,
+        1558
+      ],
+      [
+        7405,
+        4234,
+        4232,
+        4233
+      ],
+      [
+        7409,
+        2731,
+        2732,
+        2733
+      ],
+      [
+        7620,
+        18,
+        19,
+        20
+      ],
+      [
+        7691,
+        7574,
+        7575,
+        7576
+      ],
+      [
+        7692,
+        7578,
+        7579,
+        7580
+      ],
+      [
+        7701,
+        2637,
+        2635,
+        2638
+      ],
+      [
+        7705,
+        2637,
+        2635,
+        2638
+      ],
+      [
+        7797,
+        3326,
+        3325,
+        3327
+      ],
+      [
+        7868,
+        80,
+        89,
+        92
+      ],
+      [
+        7869,
+        80,
+        89,
+        92
+      ],
+      [
+        7870,
+        80,
+        89,
+        92
+      ],
+      [
+        7878,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        7879,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        7880,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        7932,
+        1582,
+        1581,
+        1580
+      ],
+      [
+        7938,
+        2731,
+        2732,
+        2733
+      ],
+      [
+        8015,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        8016,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        8017,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        8018,
+        4658,
+        4657,
+        4659
+      ],
+      [
+        8194,
+        3262,
+        3260,
+        3263
+      ],
+      [
+        8392,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        8393,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        8394,
+        4666,
+        4664,
+        4668
+      ],
+      [
+        8488,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        8489,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        8490,
+        4672,
+        4671,
+        4673
+      ],
+      [
+        8700,
+        1793,
+        1794,
+        1795
+      ],
+      [
+        8701,
+        1793,
+        1794,
+        1795
+      ],
+      [
+        8702,
+        1793,
+        1794,
+        1795
+      ],
+      [
+        10374,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        10375,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        10376,
+        4652,
+        4651,
+        4653
+      ],
+      [
+        10393,
+        6489,
+        6488,
+        6490
+      ],
+      [
+        10394,
+        6489,
+        6488,
+        6490
+      ],
+      [
+        11918,
+        386,
+        387,
+        836
+      ],
+      [
+        11919,
+        386,
+        387,
+        836
+      ],
+      [
+        11920,
+        386,
+        387,
+        836
+      ],
+      [
+        11921,
+        433,
+        434,
+        836
+      ]
+    ]
+  },
+  "defaults": {
+    "$comment": "Fallback for NPCs without explicit definitions",
+    "humanoid": {
+      "attack": 422,
+      "block": 424,
+      "death": 836,
+      "deathSound": 512
+    }
+  }
+}

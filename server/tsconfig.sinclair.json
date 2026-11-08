@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*",
+    "data/**/*",
+    "gamemodes/sinclair-mansion/**/*",
+    "tests/sinclair-mansion.test.ts",
+    "../client/rs/**/*",
+    "../client/common/**/*"
+  ]
+}

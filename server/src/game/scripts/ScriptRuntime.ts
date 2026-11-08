@@ -1,0 +1,792 @@
+import { logger as defaultLogger } from "../../utils/logger";
+import { ScriptScheduler } from "../systems/ScriptScheduler";
+import { ScriptRegistry } from "./ScriptRegistry";
+import {
+    type ClientMessageHandler,
+    type CommandHandler,
+    type EquipmentActionEvent,
+    type EquipmentActionHandler,
+    type GroundItemInteractionEvent,
+    type GroundItemInteractionHandler,
+    type IScriptRegistry,
+    type ItemOnGroundEvent,
+    type ItemOnGroundHandler,
+    type ItemOnItemEvent,
+    type ItemOnItemHandler,
+    type ItemOnLocEvent,
+    type ItemOnLocHandler,
+    type ItemOnNpcEvent,
+    type ItemOnNpcHandler,
+    type ItemOnPlayerEvent,
+    type ItemOnPlayerHandler,
+    type LocInteractionEvent,
+    type LocInteractionHandler,
+    type NpcInteractionEvent,
+    type NpcInteractionHandler,
+    type NpcMagicHitEvent,
+    type NpcMagicHitHandler,
+    NpcAttackDecision,
+    type NpcAttackEvent,
+    type NpcAttackHandler,
+    NpcPreDeathDecision,
+    type NpcPreDeathEvent,
+    type NpcPreDeathHandler,
+    type RegionEvent,
+    type RegionEventHandler,
+    type ScriptActionHandler,
+    type ScriptRegistrationResult,
+    type ScriptServices,
+    type TickHandler,
+    type TickScriptEvent,
+    type WidgetActionEvent,
+    type WidgetActionHandler,
+    type ZoneDefinition,
+    type ZoneEvent,
+    type ZoneEventHandler,
+    type ZoneEventType,
+    type ZoneHandlers,
+} from "./types";
+
+type LoggerLike = {
+    info: (...args: unknown[]) => void;
+    warn: (...args: unknown[]) => void;
+    error: (...args: unknown[]) => void;
+    debug: (...args: unknown[]) => void;
+};
+
+interface ScriptRuntimeOptions {
+    registry: ScriptRegistry;
+    scheduler: ScriptScheduler;
+    logger?: LoggerLike;
+    services: ScriptServices;
+}
+
+export class ScriptRuntime {
+    private readonly registry: ScriptRegistry;
+    private readonly scheduler: ScriptScheduler;
+    private readonly logger: LoggerLike;
+    private readonly services: ScriptServices;
+    private readonly loadedHandlerIds = new Set<string>();
+    private readonly handlerDisposers = new Map<string, ScriptRegistrationResult[]>();
+    private readonly hotReloadEnabled: boolean;
+
+    constructor(options: ScriptRuntimeOptions) {
+        this.registry = options.registry;
+        this.scheduler = options.scheduler;
+        this.logger = options.logger ?? defaultLogger;
+        const hostServices = options.services;
+        const hotReloadFlag =
+            (hostServices as unknown as Record<string, unknown>).hotReloadEnabled ??
+            process.env.SCRIPT_HOT_RELOAD === "1";
+        this.hotReloadEnabled = !!hotReloadFlag;
+        this.services = hostServices;
+    }
+
+    getServices(): ScriptServices {
+        return this.services;
+    }
+
+    registerHandlers(
+        id: string,
+        fn: (registry: IScriptRegistry, services: ScriptServices) => void,
+    ): void {
+        if (!this.hotReloadEnabled && this.loadedHandlerIds.has(id)) {
+            this.logger.debug(`[script] handlers already loaded: ${id}`);
+            return;
+        }
+        if (this.hotReloadEnabled && this.loadedHandlerIds.has(id)) {
+            this.unloadHandlers(id);
+        }
+        const disposers: ScriptRegistrationResult[] = [];
+        const trackingRegistry = this.createTrackingRegistry(disposers);
+        fn(trackingRegistry, this.services);
+        this.handlerDisposers.set(id, disposers);
+        this.loadedHandlerIds.add(id);
+        this.logger.info(`[script] loaded handlers: ${id}`);
+    }
+
+    queueNpcInteraction(event: Omit<NpcInteractionEvent, "services">): boolean {
+        const scriptEvent: NpcInteractionEvent = { ...event, services: this.services };
+        const npcId = scriptEvent.npc.id;
+        const npcTypeId = scriptEvent.npc.typeId;
+        const playerId = scriptEvent.player.id;
+        const tick = scriptEvent.tick;
+        let handlerSource = "";
+        let handler = this.registry.findNpcInteractionDirect(npcId, scriptEvent.option);
+        if (handler) handlerSource = "instance";
+        if (!handler) {
+            handler = this.registry.findNpcInteractionDirect(npcTypeId, scriptEvent.option);
+            if (handler) handlerSource = "type";
+        }
+        if (!handler) {
+            handler = this.registry.findNpcAction(scriptEvent.option);
+            if (handler) handlerSource = "action";
+        }
+        if (!handler) {
+            this.logger.info(
+                `[script] no NPC handler for id=${npcId} type=${npcTypeId} option=${
+                    scriptEvent.option || "default"
+                }`,
+            );
+            return false;
+        }
+        this.logger.info(
+            `[script] queue npc handler id=${npcId} type=${npcTypeId} option=${
+                scriptEvent.option || "default"
+            } via=${handlerSource} player=${playerId}`,
+        );
+        this.scheduleHandler(
+            tick,
+            handler,
+            scriptEvent,
+            () => `[script] npc id=${npcId} option=${scriptEvent.option || "default"}`,
+        );
+        return true;
+    }
+
+    queueLocInteraction(event: Omit<LocInteractionEvent, "services">): boolean {
+        const scriptEvent: LocInteractionEvent = { ...event, services: this.services };
+        const locId = scriptEvent.locId;
+        const tick = scriptEvent.tick;
+        const handler = this.registry.findLocInteraction(locId, scriptEvent.action);
+        if (!handler) {
+            this.logger.debug(
+                `[script] no loc handler for id=${locId} action=${scriptEvent.action || "default"}`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            tick,
+            handler,
+            scriptEvent,
+            () => `[script] loc id=${locId} action=${scriptEvent.action || "default"}`,
+        );
+        return true;
+    }
+
+    runLocInteractionNow(event: Omit<LocInteractionEvent, "services">): boolean {
+        const scriptEvent: LocInteractionEvent = { ...event, services: this.services };
+        const locId = scriptEvent.locId;
+        const handler = this.registry.findLocInteraction(locId, scriptEvent.action);
+        if (!handler) {
+            this.logger.debug(
+                `[script] no loc handler for id=${locId} action=${scriptEvent.action || "default"}`,
+            );
+            return false;
+        }
+        try {
+            const result = handler(scriptEvent);
+            if (result instanceof Promise) {
+                result.catch((err) => {
+                    this.logger.warn(
+                        `[script] immediate loc id=${locId} action=${
+                            scriptEvent.action || "default"
+                        } threw (async)`,
+                        {
+                            error: err instanceof Error ? (err.stack ?? err.message) : err,
+                        },
+                    );
+                });
+            }
+        } catch (err) {
+            this.logger.warn(
+                `[script] immediate loc id=${locId} action=${
+                    scriptEvent.action || "default"
+                } threw`,
+                {
+                    error: err instanceof Error ? (err.stack ?? err.message) : err,
+                },
+            );
+        }
+        return true;
+    }
+
+    queueItemOnItem(event: Omit<ItemOnItemEvent, "services">): boolean {
+        const scriptEvent: ItemOnItemEvent = { ...event, services: this.services };
+        const sourceItemId = scriptEvent.source.itemId;
+        const targetItemId = scriptEvent.target.itemId;
+        const tick = scriptEvent.tick;
+        const handler = this.registry.findItemOnItem(
+            sourceItemId,
+            targetItemId,
+            scriptEvent.option,
+        );
+        if (!handler) {
+            this.logger.debug(
+                `[script] no item handler for source=${sourceItemId} target=${targetItemId} option=${
+                    scriptEvent.option || "default"
+                }`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            tick,
+            handler,
+            scriptEvent,
+            () =>
+                `[script] item ${sourceItemId} -> ${targetItemId} option=${
+                    scriptEvent.option || "default"
+                }`,
+        );
+        return true;
+    }
+
+    queueItemOnLoc(event: Omit<ItemOnLocEvent, "services">): boolean {
+        const scriptEvent: ItemOnLocEvent = { ...event, services: this.services };
+        const sourceItemId = scriptEvent.source.itemId;
+        const locId = scriptEvent.target.locId;
+        const tick = scriptEvent.tick;
+        const handler = this.registry.findItemOnLoc(sourceItemId, locId, scriptEvent.option);
+        if (!handler) {
+            this.logger.debug(
+                `[script] no item-on-loc handler for source=${sourceItemId} loc=${locId} option=${
+                    scriptEvent.option || "default"
+                }`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            tick,
+            handler,
+            scriptEvent,
+            () =>
+                `[script] item ${sourceItemId} -> loc ${locId} option=${
+                    scriptEvent.option || "default"
+                }`,
+        );
+        return true;
+    }
+
+    /**
+     * Runs before a lethal NPC hit is applied. This intentionally does not use the
+     * scheduler: combat must know the decision in the same authoritative tick.
+     */
+    runNpcPreDeath(event: Omit<NpcPreDeathEvent, "services">): boolean {
+        const scriptEvent: NpcPreDeathEvent = { ...event, services: this.services };
+        const npc = scriptEvent.npc;
+        const handler =
+            this.registry.findNpcPreDeath(npc.id) ??
+            this.registry.findNpcPreDeath(npc.typeId);
+        if (!handler) return false;
+
+        try {
+            const result: unknown = handler(scriptEvent);
+            if (
+                result !== null &&
+                typeof result === "object" &&
+                typeof (result as { then?: unknown }).then === "function"
+            ) {
+                Promise.resolve(result).catch((err) => {
+                    this.logger.warn(`[script] npc pre-death handler threw (async)`, {
+                        error: err instanceof Error ? (err.stack ?? err.message) : err,
+                    });
+                });
+                this.logger.warn(
+                    `[script] npc pre-death handler for id=${npc.id} returned a Promise; ` +
+                        `the hook must be synchronous`,
+                );
+                return false;
+            }
+            return result === NpcPreDeathDecision.Prevent;
+        } catch (err) {
+            this.logger.warn(`[script] npc pre-death handler for id=${npc.id} threw`, {
+                error: err instanceof Error ? (err.stack ?? err.message) : err,
+            });
+            return false;
+        }
+    }
+
+    /** Runs synchronously when an accurate player spell deals damage to an NPC. */
+    runNpcMagicHit(event: Omit<NpcMagicHitEvent, "services">): void {
+        const scriptEvent: NpcMagicHitEvent = { ...event, services: this.services };
+        const npc = scriptEvent.npc;
+        const handler =
+            this.registry.findNpcMagicHit(npc.id) ??
+            this.registry.findNpcMagicHit(npc.typeId);
+        if (!handler) return;
+        try {
+            handler(scriptEvent);
+        } catch (err) {
+            this.logger.warn(`[script] npc magic-hit handler for id=${npc.id} threw`, {
+                error: err instanceof Error ? (err.stack ?? err.message) : err,
+            });
+        }
+    }
+
+    runNpcAttack(event: Omit<NpcAttackEvent, "services">): boolean {
+        const scriptEvent: NpcAttackEvent = { ...event, services: this.services };
+        const handler =
+            this.registry.findNpcAttack(scriptEvent.npc.id) ??
+            this.registry.findNpcAttack(scriptEvent.npc.typeId);
+        if (!handler) return false;
+        try {
+            return handler(scriptEvent) === NpcAttackDecision.Prevent;
+        } catch (err) {
+            this.logger.warn(`[script] npc attack handler for id=${scriptEvent.npc.id} threw`, {
+                error: err instanceof Error ? (err.stack ?? err.message) : err,
+            });
+            return false;
+        }
+    }
+
+    queueItemOnNpc(event: Omit<ItemOnNpcEvent, "services">): boolean {
+        const scriptEvent: ItemOnNpcEvent = { ...event, services: this.services };
+        const sourceItemId = scriptEvent.source.itemId;
+        const npcId = scriptEvent.target.id;
+        const npcTypeId = scriptEvent.target.typeId;
+        const tick = scriptEvent.tick;
+        const handler =
+            this.registry.findItemOnNpc(sourceItemId, npcId, scriptEvent.option) ??
+            this.registry.findItemOnNpc(sourceItemId, npcTypeId, scriptEvent.option);
+        if (!handler) {
+            this.logger.debug(
+                `[script] no item-on-npc handler for source=${sourceItemId} npc=${npcId} type=${npcTypeId} option=${
+                    scriptEvent.option || "default"
+                }`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            tick,
+            handler,
+            scriptEvent,
+            () =>
+                `[script] item ${sourceItemId} -> npc ${npcId} type=${npcTypeId} option=${
+                    scriptEvent.option || "default"
+                }`,
+        );
+        return true;
+    }
+
+    queueItemOnPlayer(event: Omit<ItemOnPlayerEvent, "services">): boolean {
+        const scriptEvent: ItemOnPlayerEvent = { ...event, services: this.services };
+        const sourceItemId = scriptEvent.source.itemId;
+        const handler = this.registry.findItemOnPlayer(sourceItemId, scriptEvent.option);
+        if (!handler) {
+            this.logger.debug(
+                `[script] no item-on-player handler for source=${sourceItemId} option=${
+                    scriptEvent.option || "default"
+                }`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            scriptEvent.tick,
+            handler,
+            scriptEvent,
+            () => `[script] item ${sourceItemId} -> player ${scriptEvent.target.id}`,
+        );
+        return true;
+    }
+
+    queueGroundItemInteraction(
+        event: Omit<GroundItemInteractionEvent, "services">,
+    ): boolean {
+        const scriptEvent: GroundItemInteractionEvent = { ...event, services: this.services };
+        const handler = this.registry.findGroundItemInteraction(
+            scriptEvent.target.itemId,
+            scriptEvent.option,
+        );
+        if (!handler) {
+            this.logger.debug(
+                `[script] no ground-item handler for item=${scriptEvent.target.itemId} option=${
+                    scriptEvent.option || "default"
+                }`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            scriptEvent.tick,
+            handler,
+            scriptEvent,
+            () =>
+                `[script] ground item=${scriptEvent.target.itemId} stack=${
+                    scriptEvent.target.stackId
+                } option=${scriptEvent.option || "default"}`,
+        );
+        return true;
+    }
+
+    queueItemOnGround(event: Omit<ItemOnGroundEvent, "services">): boolean {
+        const scriptEvent: ItemOnGroundEvent = { ...event, services: this.services };
+        const handler = this.registry.findItemOnGround(
+            scriptEvent.source.itemId,
+            scriptEvent.target.itemId,
+            scriptEvent.option,
+        );
+        if (!handler) {
+            this.logger.debug(
+                `[script] no item-on-ground handler for source=${
+                    scriptEvent.source.itemId
+                } target=${scriptEvent.target.itemId} option=${scriptEvent.option || "default"}`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            scriptEvent.tick,
+            handler,
+            scriptEvent,
+            () =>
+                `[script] item ${scriptEvent.source.itemId} -> ground ${
+                    scriptEvent.target.itemId
+                } stack=${scriptEvent.target.stackId}`,
+        );
+        return true;
+    }
+
+    // Single-item action (e.g., bones -> "Bury"). Looks up registerItemAction handlers.
+    queueItemAction(event: {
+        tick: number;
+        player: import("../player").PlayerState;
+        itemId: number;
+        slot: number;
+        option?: string;
+    }): boolean {
+        const scriptEvent: ItemOnItemEvent = {
+            tick: event.tick,
+            services: this.services,
+            player: event.player,
+            source: { slot: event.slot, itemId: event.itemId },
+            target: { slot: -1, itemId: -1 },
+            option: event.option,
+        };
+        const sourceItemId = scriptEvent.source.itemId;
+        const handler = this.registry.findItemOnItem(sourceItemId, -1, scriptEvent.option);
+        if (!handler) {
+            this.logger.debug(
+                `[script] no item action for item=${sourceItemId} option=${
+                    scriptEvent.option || "default"
+                }`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            scriptEvent.tick,
+            handler,
+            scriptEvent,
+            () => `[script] item action ${sourceItemId} option=${scriptEvent.option || "default"}`,
+        );
+        return true;
+    }
+
+    queueEquipmentAction(event: Omit<EquipmentActionEvent, "services">): boolean {
+        const normalizedOption = (event.option || "").trim().toLowerCase();
+        const scriptEvent: EquipmentActionEvent = {
+            tick: event.tick,
+            services: this.services,
+            player: event.player,
+            slot: event.slot,
+            itemId: event.itemId,
+            option: normalizedOption,
+            rawOption: event.rawOption,
+        };
+        const itemId = scriptEvent.itemId;
+        const handler = this.registry.findEquipmentAction(itemId, scriptEvent.option);
+        if (!handler) {
+            this.logger.debug(
+                `[script] no equipment action for item=${itemId} option=${
+                    scriptEvent.option || "default"
+                }`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            scriptEvent.tick,
+            handler,
+            scriptEvent,
+            () => `[script] equipment item=${itemId} option=${scriptEvent.option || "default"}`,
+        );
+        return true;
+    }
+
+    queueWidgetAction(event: {
+        tick: number;
+        player: import("../player").PlayerState;
+        widgetId: number;
+        groupId: number;
+        childId: number;
+        option?: string;
+        target?: string;
+        opId?: number;
+        slot?: number;
+        itemId?: number;
+        isPrimary?: boolean;
+        cursorX?: number;
+        cursorY?: number;
+    }): boolean {
+        const widgetId = event.widgetId;
+        const handler = this.registry.findWidgetAction(widgetId, event.opId, event.option);
+        if (!handler) {
+            this.logger.debug(
+                `[script] no widget handler for widget=${widgetId} op=${event.opId ?? "*"} option=${
+                    event.option || "default"
+                }`,
+            );
+            return false;
+        }
+        const scriptEvent: WidgetActionEvent = {
+            tick: event.tick,
+            services: this.services,
+            player: event.player,
+            widgetId,
+            groupId: event.groupId,
+            childId: event.childId,
+            option: event.option,
+            target: event.target,
+            opId: event.opId,
+            slot: event.slot,
+            itemId: event.itemId,
+            isPrimary: event.isPrimary,
+            cursorX: event.cursorX,
+            cursorY: event.cursorY,
+        };
+        this.scheduleHandler(
+            scriptEvent.tick,
+            handler,
+            scriptEvent,
+            () =>
+                `[script] widget=${scriptEvent.widgetId} op=${scriptEvent.opId ?? "*"} option=${
+                    scriptEvent.option || "default"
+                }`,
+        );
+        return true;
+    }
+
+    getZoneDefinitions(): readonly ZoneDefinition[] {
+        return this.registry.getZoneDefinitions();
+    }
+
+    queueZoneEvent(event: Omit<ZoneEvent, "services">): boolean {
+        const scriptEvent: ZoneEvent = { ...event, services: this.services };
+        const handler = this.registry.findZoneHandler(scriptEvent.zone.id, scriptEvent.type);
+        if (!handler) {
+            this.logger.debug(
+                `[script] no zone handler for zone=${scriptEvent.zone.id} type=${scriptEvent.type}`,
+            );
+            return false;
+        }
+        this.scheduleHandler(
+            scriptEvent.tick,
+            handler,
+            scriptEvent,
+            () => `[script] zone=${scriptEvent.zone.id} type=${scriptEvent.type}`,
+        );
+        return true;
+    }
+
+    queueRegionEvent(event: Omit<RegionEvent, "services">): boolean {
+        const scriptEvent: RegionEvent = { ...event, services: this.services };
+        const regionId = scriptEvent.regionId;
+        const tick = scriptEvent.tick;
+        const handlers = this.registry.getRegionHandlers(scriptEvent.regionId);
+        if (!handlers || handlers.size === 0) {
+            this.logger.debug(
+                `[script] no region handler for region=${regionId} type=${scriptEvent.type}`,
+            );
+            return false;
+        }
+        for (const handler of handlers) {
+            this.scheduleHandler(
+                tick,
+                handler,
+                scriptEvent,
+                () => `[script] region=${regionId} type=${scriptEvent.type}`,
+            );
+        }
+        return true;
+    }
+
+    queueTick(tick: number): void {
+        if (this.registry.getTickHandlers().size === 0) return;
+        const event: TickScriptEvent = { tick: tick, services: this.services };
+        for (const handler of this.registry.getTickHandlers()) {
+            this.scheduleHandler(
+                event.tick,
+                handler,
+                event,
+                () => `[script] tick handler (tick=${event.tick})`,
+            );
+        }
+    }
+
+    reset(): void {
+        for (const [handlerId, disposers] of this.handlerDisposers.entries()) {
+            for (const disposer of disposers.reverse()) {
+                try {
+                    disposer.unregister();
+                } catch (err) {
+                    this.logger.warn(`[script] disposer for ${handlerId} threw`, err);
+                }
+            }
+        }
+        this.handlerDisposers.clear();
+        this.registry.clearAll();
+        this.scheduler.clear();
+        this.loadedHandlerIds.clear();
+    }
+
+    private unloadHandlers(id: string): void {
+        const disposers = this.handlerDisposers.get(id);
+        if (!disposers) return;
+        for (const disposer of disposers.reverse()) {
+            try {
+                disposer.unregister();
+            } catch (err) {
+                this.logger.warn(`[script] disposer for ${id} threw`, err);
+            }
+        }
+        this.handlerDisposers.delete(id);
+        this.loadedHandlerIds.delete(id);
+    }
+
+    private scheduleHandler<TEvent>(
+        tick: number,
+        handler: (event: TEvent) => void | Promise<void>,
+        event: TEvent,
+        describe: () => string,
+    ): void {
+        this.scheduler.scheduleAt(tick, () => {
+            try {
+                const result = handler(event);
+                if (result instanceof Promise) {
+                    result.catch((err) => {
+                        this.logger.warn(`${describe()} threw (async)`, {
+                            error: err instanceof Error ? (err.stack ?? err.message) : err,
+                        });
+                    });
+                }
+            } catch (err) {
+                this.logger.warn(`${describe()} threw`, {
+                    error: err instanceof Error ? (err.stack ?? err.message) : err,
+                });
+            }
+        });
+    }
+
+    private createTrackingRegistry(disposers: ScriptRegistrationResult[]): IScriptRegistry {
+        const track = (result: ScriptRegistrationResult | undefined): ScriptRegistrationResult => {
+            const out: ScriptRegistrationResult = result ?? { unregister() {} };
+            disposers.push(out);
+            return out;
+        };
+        return {
+            registerNpcInteraction: (npcId, handler, option) =>
+                track(this.registry.registerNpcInteraction(npcId, handler, option)),
+            registerNpcScript: (params) => track(this.registry.registerNpcScript(params)),
+            registerNpcPreDeath: (npcId: number, handler: NpcPreDeathHandler) =>
+                track(this.registry.registerNpcPreDeath(npcId, handler)),
+            registerNpcMagicHit: (npcId: number, handler: NpcMagicHitHandler) =>
+                track(this.registry.registerNpcMagicHit(npcId, handler)),
+            registerNpcAttack: (npcId: number, handler: NpcAttackHandler) =>
+                track(this.registry.registerNpcAttack(npcId, handler)),
+            registerLocInteraction: (locId, handler, action) =>
+                track(this.registry.registerLocInteraction(locId, handler, action)),
+            registerLocScript: (params) => track(this.registry.registerLocScript(params)),
+            registerLocAction: (action, handler) =>
+                track(this.registry.registerLocAction(action, handler)),
+            registerItemOnItem: (
+                sourceItemId: number,
+                targetItemId: number,
+                handler: ItemOnItemHandler,
+                option?: string,
+            ) =>
+                track(
+                    this.registry.registerItemOnItem(sourceItemId, targetItemId, handler, option),
+                ),
+            registerItemOnLoc: (
+                sourceItemId: number,
+                locId: number,
+                handler: ItemOnLocHandler,
+                option?: string,
+            ) => track(this.registry.registerItemOnLoc(sourceItemId, locId, handler, option)),
+            registerItemOnNpc: (
+                sourceItemId: number,
+                npcId: number,
+                handler: ItemOnNpcHandler,
+                option?: string,
+            ) => track(this.registry.registerItemOnNpc(sourceItemId, npcId, handler, option)),
+            registerItemOnPlayer: (
+                sourceItemId: number,
+                handler: ItemOnPlayerHandler,
+                option?: string,
+            ) => track(this.registry.registerItemOnPlayer(sourceItemId, handler, option)),
+            registerGroundItemInteraction: (
+                itemId: number,
+                handler: GroundItemInteractionHandler,
+                option?: string,
+            ) => track(this.registry.registerGroundItemInteraction(itemId, handler, option)),
+            registerItemOnGround: (
+                sourceItemId: number,
+                targetItemId: number,
+                handler: ItemOnGroundHandler,
+                option?: string,
+            ) =>
+                track(
+                    this.registry.registerItemOnGround(
+                        sourceItemId,
+                        targetItemId,
+                        handler,
+                        option,
+                    ),
+                ),
+            registerItemAction: (itemId: number, handler: ItemOnItemHandler, option?: string) =>
+                track(this.registry.registerItemAction(itemId, handler, option)),
+            registerEquipmentAction: (
+                itemId: number,
+                handler: EquipmentActionHandler,
+                option?: string,
+            ) => track(this.registry.registerEquipmentAction(itemId, handler, option)),
+            registerEquipmentOption: (option: string, handler: EquipmentActionHandler) =>
+                track(this.registry.registerEquipmentOption(option, handler)),
+            registerWidgetAction: (params) => track(this.registry.registerWidgetAction(params)),
+            onButton: (interfaceId: number, component: number, handler: WidgetActionHandler) =>
+                track(this.registry.onButton(interfaceId, component, handler)),
+            registerNpcAction: (option: string, handler: NpcInteractionHandler) =>
+                track(this.registry.registerNpcAction(option, handler)),
+            registerZone: (definition: ZoneDefinition, handlers: ZoneHandlers) =>
+                track(this.registry.registerZone(definition, handlers)),
+            findZoneHandler: (zoneId: string, type: ZoneEventType): ZoneEventHandler | undefined =>
+                this.registry.findZoneHandler(zoneId, type),
+            registerRegionHandler: (regionId: number, handler: RegionEventHandler) =>
+                track(this.registry.registerRegionHandler(regionId, handler)),
+            registerTickHandler: (handler: TickHandler) =>
+                track(this.registry.registerTickHandler(handler)),
+            registerCommand: (name: string, handler: CommandHandler) =>
+                track(this.registry.registerCommand(name, handler)),
+            findCommand: (name: string) => this.registry.findCommand(name),
+            findNpcInteraction: (npcId, option) => this.registry.findNpcInteraction(npcId, option),
+            findNpcInteractionDirect: (npcId, option) =>
+                this.registry.findNpcInteractionDirect(npcId, option),
+            findNpcPreDeath: (npcId) => this.registry.findNpcPreDeath(npcId),
+            findNpcMagicHit: (npcId) => this.registry.findNpcMagicHit(npcId),
+            findNpcAttack: (npcId) => this.registry.findNpcAttack(npcId),
+            findLocInteraction: (locId, action) => this.registry.findLocInteraction(locId, action),
+            findItemOnItem: (sourceItemId, targetItemId, option) =>
+                this.registry.findItemOnItem(sourceItemId, targetItemId, option),
+            findItemOnLoc: (sourceItemId, locId, option) =>
+                this.registry.findItemOnLoc(sourceItemId, locId, option),
+            findItemOnNpc: (sourceItemId, npcId, option) =>
+                this.registry.findItemOnNpc(sourceItemId, npcId, option),
+            findItemOnPlayer: (sourceItemId, option) =>
+                this.registry.findItemOnPlayer(sourceItemId, option),
+            findGroundItemInteraction: (itemId, option) =>
+                this.registry.findGroundItemInteraction(itemId, option),
+            findItemOnGround: (sourceItemId, targetItemId, option) =>
+                this.registry.findItemOnGround(sourceItemId, targetItemId, option),
+            findEquipmentAction: (itemId, option) =>
+                this.registry.findEquipmentAction(itemId, option),
+            findWidgetAction: (widgetId, opId, option) =>
+                this.registry.findWidgetAction(widgetId, opId, option),
+            findButton: (interfaceId, component) =>
+                this.registry.findButton(interfaceId, component),
+            findNpcAction: (option) => this.registry.findNpcAction(option),
+            registerClientMessageHandler: (messageType: string, handler: ClientMessageHandler) =>
+                track(this.registry.registerClientMessageHandler(messageType, handler)),
+            findClientMessageHandler: (messageType: string) =>
+                this.registry.findClientMessageHandler(messageType),
+            registerActionHandler: (kind: string, handler: ScriptActionHandler) =>
+                track(this.registry.registerActionHandler(kind, handler)),
+            findActionHandler: (kind: string) => this.registry.findActionHandler(kind),
+        } as IScriptRegistry;
+    }
+}
