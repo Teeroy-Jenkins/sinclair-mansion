@@ -10,7 +10,7 @@ One of the Sinclair household killed Lord Sinclair. Everyone else does their cho
 
 ## Installing
 
-**FYI: The exe isn't code-signed, so you may get a prompt saying "Windows protected your PC" the first time. Choose **More info → Run anyway**. The zip is Windows only for now.**
+**FYI: The exe isn't code-signed, so you may get a prompt saying "Windows protected your PC" the first time. Choose "More info → Run anyway". The zip is Windows only for now.**
 
 
 1. Download `SinclairMansion.zip` from the [latest release](https://github.com/Teeroy-Jenkins/sinclair-mansion/releases/latest) and unzip it anywhere.
