@@ -4,7 +4,7 @@
 
 One of the Sinclair household killed Lord Sinclair. Everyone else does their chores, gathers clues and argues it out at the dinner table. The Murderer tries to frame someone, picks people off when they're alone, or slips out through the garden wall. Think *Among Us* or *Town of Salem*, played in the real Sinclair Mansion north of Camelot, with OSRS models, menus, combat and chat.
 
-[**⬇ Download the latest release**](https://github.com/Teeroy-Jenkins/sinclair-mansion/releases/latest) · [Report a bug](https://github.com/Teeroy-Jenkins/sinclair-mansion/issues) · [Full game rules](server/gamemodes/sinclair-mansion/README.md)
+[**⬇ Download the latest release**](https://github.com/Teeroy-Jenkins/sinclair-mansion/releases/latest) · [Report a bug](https://github.com/Teeroy-Jenkins/sinclair-mansion/issues)
 
 > 🤖 **Made with AI ("vibecoding").** Most of this project's code, docs and design were written by AI coding assistants (mainly Anthropic's Claude, through Claude Code), steered, played and tested by a human. Expect rough edges. Bug reports and pull requests are welcome.
 
