@@ -37,6 +37,7 @@ There are two paths for creating a gamemode:
 | Gamemode           | Base              | Description                                                                                                    |
 | ------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------- |
 | `sinclair-mansion` | `SinclairBase`    | Among Us-style murder mystery — roles, chores, evidence, arrest phase                                          |
+| `dev`              | `BaseGamemode`    | XRSPS's dev gamemode for engine testing; Sinclair Mansion reuses its combat data, shops and bank               |
 
 ## Creating a Gamemode
 
@@ -135,7 +136,7 @@ The default gamemode is `sinclair-mansion`.
 | ----------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------- |
 | Engine systems (ticks, networking, player sync)       | `server/src/`                                                              | Collision, pathfinding, packet routing             |
 | Pluggable data providers (combat formulas, spells)    | `server/src/game/providers/` interfaces, `sinclair-mansion/` implementations | CombatFormulaProvider, SpellDataProvider           |
-| Reusable services (shop orchestration, banking)       | Service classes in the gamemode (`sinclair-mansion/ShopService.ts`)        | ShopService wraps ShopManager + server integration |
+| Reusable services (shop orchestration, banking)       | Service classes in the gamemode (`dev/shops/ShopService.ts`)              | ShopService wraps ShopManager + server integration |
 | Gamemode-specific rules (XP rates, tutorials)         | `server/gamemodes/{id}/index.ts` overrides                                 | Custom XP multiplier, role logic                   |
 | Universal tools (debug commands, admin)               | `server/extrascripts/{id}/`                                                | item-spawner                                       |
 
@@ -150,14 +151,17 @@ server/gamemodes/sinclair-mansion/
 ├── MurderGame.ts               # Game rules: roles, phases, evidence, arrest
 ├── mansion.ts                  # Map data: rooms, containers, tasks, spawns
 ├── bots.ts                     # Bot AI: roles, plans, weapons, listening to chat, voting
+├── botLooks.ts                 # Each bot's look, seeded by name
 ├── botChat.ts                  # Bot personas and every line they say
 ├── hud.ts                      # HUD state management
-├── store.ts                    # Main-menu Store and Bank (engine's OSRS shop + bank)
+├── rooms.ts                    # Rooms: codes, host / join / leave, host hand-over
+├── butler.ts                   # The Demon butler: wares and token prices
+├── store.ts                    # Main-menu Store and Bank (engine's OSRS shop + bank), the butler's shop
 ├── cosmetics.ts                # Cosmetic store stock and prices, toy handlers
 ├── progression.ts              # Coins, cosmetics and bank saved in the player's browser
-├── config.ts                   # Server configuration
+├── config.ts                   # Every gameplay tunable (times, coins, stats, bots)
 ├── discovery.ts                # Server discovery (LAN/remote)
-├── upnp.ts                     # UPnP port forwarding
+├── upnp.ts                     # Optional UPnP port forwarding (SINCLAIR_UPNP=1)
 └── room-map.json               # Mansion layout data
 ```
 

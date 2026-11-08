@@ -1,12 +1,12 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
-    title: 'XRSPS',
-    description: 'Build gamemodes and extrascripts for OSRS in the browser',
+    title: 'Murder at Sinclair Mansion',
+    description: 'A social deduction game in Sinclair Mansion, built on XRSPS',
     base: '/',
     head: [
-        ['meta', { property: 'og:title', content: 'XRSPS' }],
-        ['meta', { property: 'og:description', content: 'Build gamemodes and extrascripts for OSRS in the browser' }],
+        ['meta', { property: 'og:title', content: 'Murder at Sinclair Mansion' }],
+        ['meta', { property: 'og:description', content: 'A social deduction game in Sinclair Mansion, built on XRSPS' }],
         ['meta', { name: 'theme-color', content: '#4a9eff' }],
     ],
     themeConfig: {
@@ -21,6 +21,7 @@ export default defineConfig({
                 text: 'Getting Started',
                 items: [
                     { text: 'Setup', link: '/setup' },
+                    { text: 'Design summary', link: '/design-summary' },
                     { text: 'FAQ', link: '/faq' },
                 ],
             },
@@ -34,14 +35,13 @@ export default defineConfig({
             },
         ],
         socialLinks: [
-            { icon: 'discord', link: 'https://discord.gg/3dzttF2q73' },
-            { icon: 'github', link: 'https://github.com/xrsps/xrsps-typescript' },
+            { icon: 'github', link: 'https://github.com/Teeroy-Jenkins/sinclair-mansion' },
         ],
         footer: {
             message: 'Fan project. Not affiliated with Jagex Ltd.',
         },
         editLink: {
-            pattern: 'https://github.com/xrsps/xrsps-typescript/edit/main/docs/:path',
+            pattern: 'https://github.com/Teeroy-Jenkins/sinclair-mansion/edit/main/docs/:path',
             text: 'Edit this page on GitHub',
         },
     },

@@ -1,7 +1,7 @@
 # Murder at Sinclair Mansion
 
-The social-deduction game from `../../../../sinclair-mansion` (the canvas
-prototype), rebuilt as a Sinclair Mansion gamemode. It runs in the real Sinclair Mansion
+The complete rules of Murder at Sinclair Mansion, a social-deduction game built as an XRSPS
+gamemode (a short overview is in `docs/design-summary.md`). It runs in the real Sinclair Mansion
 north of Camelot, with real OSRS models, menus, chat and interfaces. The play area is
 the whole mansion (both floors) and its walled grounds.
 
@@ -36,7 +36,7 @@ remembered in the browser.
   modelled on the Impostor Among Us server's GameManager). The game is shared as a zip
   (`yarn build:zip`, see the root README): every player runs their own copy, and a host's copy
   is the server their friends connect to.
-  * **Host**: game name, optional password, players (4 to 12, people and bots together),
+  * **Host**: game name, optional password, players (4 to 10, people and bots together),
     **Fill empty seats with bots**, then **Host**. You always host on your own copy: pressed
     while visiting a friend's game, Host reconnects to your copy first. The room panel shows
     the 6-character **room code** and whether friends can reach it over the internet.
@@ -47,7 +47,8 @@ remembered in the browser.
     server (`client/network/peer/PeerLink.ts`, started by `client/game/murder/PeerHosting.ts`).
     The client checks the host answers before leaving your own game.
   * **Join**: a scrolling server browser. It lists the room on the copy you're connected to,
-    rooms other copies on your network are hosting, and servers saved by older versions (each
+    rooms hosted over the internet (the PeerJS room list, see the root README), rooms other
+    copies on your network are hosting, and servers saved by older versions (each
     checked every 4 s through that server's `/status`, so it shows the game's name, host,
     players and lock, or "Not reachable"). There is no address box: players join by room code.
   * Joining a room on another copy logs you out here and back in there with the same name,
@@ -120,13 +121,13 @@ remembered in the browser.
    changed. **More than half** of the living's votes for one person arrests them at once; if
    everyone has voted, or time runs out, without that, nobody is arrested (a table of bots alone
    talks until halfway through its time first). Ghosts don't vote. Everyone who voted for the
-   Murderer is paid. Bots vote too, all within the first 10 seconds (`C.bots.voteWithinSec`): a
+   Murderer is paid. Bots vote too, each 12-20 s after sitting down (`C.bots.voteDelaySec`): a
    first vote needs real evidence of their own (claws, an attack, an escape attempt, a hand-off
    they saw; the Detective's notebook), otherwise they skip. Then they listen: names that keep
    coming up in chat (from people and bots alike, and from several people more than one person
    repeating it), names someone vouched for, what the Detective says (it counts three times) and
    where the votes are piling up (the easily led follow the pile). After 15 s they may change their
-   vote, up to twice. The bot Murderer frames someone (whoever it planted on or handed the weapon
+   vote, up to twice (`C.bots.maxVoteChanges`). The bot Murderer frames someone (whoever it planted on or handed the weapon
    to, someone it saw rummaging, or anyone), joins any pile that isn't on itself, and makes a fuss
    when the votes turn its way.
 
@@ -324,8 +325,8 @@ Everyone except the Detective has three chores on the go (`tasks.atOnce`), and f
 another at once (one you aren't doing, preferring one you haven't done yet), so chores go on until
 the game ends. The **Murderer gets them too**: they're the alibi.
 
-**Finishing a chore pays.** Coins for each of its steps (`coins.chorePerStep`, 15: a 5-step chore
-pays 75, the 7-step buttered potatoes 105), and **chore tokens**, one per step (`tokens.perStep`;
+**Finishing a chore pays.** Coins for each of its steps (`coins.chorePerStep`, 25: a 5-step chore
+pays 125, the 7-step buttered potatoes 175), and **chore tokens**, one per step (`tokens.perStep`;
 `MurderGame.completeChore`). The token is the cache's stackable "Warrior guild token" (8851,
 `tokens.itemId`).
 
@@ -365,9 +366,8 @@ you from game to game, across server restarts and from server to server (they're
 browser; see the Store and Bank below), to spend in the cosmetic Store. Amounts are in `config.ts` (`coins`):
 finished chores (per step), finding a hidden weapon, reporting one, studying the blood and
 lifting prints, hiding or passing on the murder weapon, surviving a round, killing someone as
-the Murderer, killing the Murderer, voting for the right arrest, and winning (all half of what
-they once were). **Killing someone who isn't the Murderer costs the Detective or household
-member who did it 1,000 coins** (`penalties.killInnocent`; from the pack, then the bank, never
+the Murderer, killing the Murderer, voting for the right arrest, and winning. **Killing someone who isn't the Murderer costs the Detective or household
+member who did it 150 coins** (`penalties.killInnocent`; from the pack, then the bank, never
 below none). The overlay shows the coins earned this game. The OSRS XP tracker and XP drops are left to real combat XP.
 
 ## The Store, the Bank and your progression
@@ -428,21 +428,23 @@ fate, the richest player, and your coin total.
 ## PvP
 
 * **Same stats for everyone, always.** Every player has the same mid-level stats in every game
-  and every round: **70 Attack, 70 Strength, 70 Defence, 70 Magic, 39 Hitpoints and 22 Prayer**
+  and every round: **70 Attack, 75 Strength, 70 Defence, 70 Magic, 40 Hitpoints and 22 Prayer**
   (`config.ts`, `pvp.stats`; not announced). 22 Prayer stops at Rapid Heal
   (no protection prayers).
 * **The Murderer's opening usually kills.** A dragon claws special, then one hit with the
-  murder weapon, kills an unarmed member of the household about **4 times in 5**. Two things
+  murder weapon, kills an unarmed member of the household about **4 times in 5**. Three things
   make that happen at mid-level stats:
   * **Slice and Dice hits twice as hard as in OSRS** (`DRAGON_CLAWS_SPECIAL_DAMAGE_MULTIPLIER`).
+    It costs 70% special energy (OSRS: 50%; `pvp.clawsSpecCost`), and a special that lands
+    drains 40 of the target's run energy (`DRAGON_CLAWS_SPECIAL_RUN_DRAIN`).
   * **Dragon claws never deal less than half their potential**, a miss included
     (`DRAGON_CLAWS_MINIMUM_DAMAGE_FRACTION`): a normal swing hits at least half its max hit, and
     the special's four hits add up to at least half its best total.
 
   Both live in `DragonClawsSpec.ts` and are applied by `CombatHitEvaluator`; other weapons
-  hit and miss as in OSRS. The 39 hitpoints are set from
+  hit and miss as in OSRS. The 40 hitpoints are set from
   `tests/sinclair-mansion-balance.test.ts`, which measures the opening with the engine's own hit
-  evaluator (20,000 openings over the whole murder-weapon pool, no prayers): **80.5%**.
+  evaluator (20,000 openings over the whole murder-weapon pool, no prayers): **82.9%**.
   `--search` prints the kill chance at every hitpoints level if the stats or weapons change.
 * **Pack.** Nobody starts with food or runes: chores pay tokens to buy a shark, the runes for one
   Bind or a prayer potion from the Demon butler (see Chores). Bind can be cast at any Magic level (`ignoresSpellLevel`
@@ -454,7 +456,7 @@ fate, the richest player, and your coin total.
   wearable at 70 (`pvp.detectiveGear`: fire cape, amulet of fury, abyssal whip, fighter torso,
   dragon platelegs; no helmet, gloves, boots, off-hand or ring), and the
   **Murderer**, who has only the murder weapon and **dragon claws** (the engine's claws special:
-  four hits, 50% energy, with this game's changes above).
+  four hits, 70% energy, with this game's changes above).
 * **Equipment stats** come from the item data and count only while worn: the engine adds up the
   bonuses of the equipped items on every hit. The Detective's set meets 70 Attack and Defence
   (checked against `items.json`).
@@ -537,7 +539,7 @@ fate, the richest player, and your coin total.
   line appears only after the time it would take to type it, at 4-6 characters a second (about
   45-70 words a minute): a shout takes about 5 s, a table alibi 10-20 s. Lines go out one at a
   time, the next table line waits a few seconds after the last, and a shout drops whatever small
-  talk was still being typed. Votes go in as clicks (within the first 10 s); saying who they voted
+  talk was still being typed. Votes go in as clicks (12-20 s after sitting down); saying who they voted
   for is typed after.
 * **Zones.** While the household is spread out, the living only see people in their own zone:
   Dining Room, Entrance Hall, West Wing, East Wing, Library, Upstairs Hall, Upstairs West,
@@ -567,8 +569,8 @@ after 30 s). It is no longer a hiding place. The buttered-potato chore starts by
 | Everyone | Furniture's normal option (Search, Open, Investigate, Take-from) searches it, or hands you a chore tool if that's your next step. Doors start open, and anyone can open or close them (bots open closed doors in their way; the dining room's west door swings into the dining room, hinged on the north side of the frame, so it never blocks the hall). **Ring** the grandfather clock (once a game) to end the round early. Examine works on everything (texts from the OSRS wiki in `server/data/examine-text.json`). |
 | Murderer | Right-click your weapon, **Use**, then click a stash spot (any furniture with a search-type option) to hide it there, or a person to hand it over (3 s; people nearby in the same room see it, but not what was handed). |
 | Household | Search furniture. A weapon you find is taken at once (with room in your pack) and announced to everyone. `::report` reports a weapon you're holding. Reports reach only the Detective. |
-| Detective (whoever holds the flypaper) | **Use** flypaper on the body (a clue to the weapon type, 25 s, one a round), on furniture or on a person (prints, 30 s, stay put). Right-click a person, **Stop and Search** (once a round) to confiscate their weapons. Results go to the chatbox, the overlay and `::notes`. |
-| Ghosts | Wrongly arrested players turn invisible, can't interact, and their public chat only reaches other ghosts. |
+| Detective (whoever holds the flypaper) | Left-click the body (**Investigate**) or **Use** flypaper on it or its blood (a clue to the weapon type, 25 s, one a round), on furniture or on a person (prints, 30 s, stay put). Right-click a person, **Stop and Search** (once a round) to confiscate their weapons. Results go to the chatbox, the overlay and `::notes`. |
+| Ghosts | The dead, the wrongly arrested and anyone who joins mid-game are invisible to the living. They can walk, watch and take the stairs and ladders but touch nothing else, don't vote, and their public chat only reaches other ghosts. |
 
 Hovering over anything you can interact with shows its left-click option by the cursor, like RuneLite's Mouse Tooltips (`MouseTooltips` in `client/game/murder/MurderExtras.tsx`). OSRS's own cursor tooltip (a cache interface) is told there is at most one option, so it never adds "+N options" (`MINIMENU_NUMOPS` in `client/rs/cs2/handlers/ClientOps.ts`). Menus no longer show "(ID: ...)".
 
@@ -609,7 +611,7 @@ whole list can be played.
 
 | File | What |
 |---|---|
-| `config.ts` | All tunables (round/freeze/arrest/lift/hand-off times, player counts, round limit, reconnect grace); `SINCLAIR_FAST=1` |
+| `config.ts` | All tunables (round/freeze/arrest/lift/hand-off times, player counts, coins, PvP stats, bot behaviour, reconnect grace; there is no round limit); `SINCLAIR_FAST=1` |
 | `MurderGame.ts` | Engine-agnostic rules: roles, weapons, crime scene, print sets, chores, rounds, arrests, reconnects, observations, overlay data. Talks to the world only through `GameIO`. |
 | `bots.ts` | Bot brains and bot memory/talk (household, Murderer, Detective), using the same commands humans trigger |
 | `mansion.ts` | Real map data: rooms on both floors, furniture (loc ids + tiles), chores and their items, weapon pool, wounds, crime-scene spots, doors, dining-table seats, bot NPC ids |
@@ -806,7 +808,7 @@ whole list can be played.
 ## Checks
 * `yarn test:sinclair`: the progression save (`sinclair-progression.test.ts`: coins, cosmetics and
   bank carry to another server, game items never saved, doctored saves refused, the store's 40
-  priced cosmetics), the RuneScape combat rule checks (`combat-runescape-rules.test.ts`), NPCs changing floor (`npc-floor-change.test.ts`), player kits past 255 surviving the appearance block (`appearance-kit-ids.test.ts`), the dragon claws damage floor (`dragon-claws-floor.test.ts`), and 52 rules checks (including the lobby: host, password, cap, bots, hand-over; rooms: one room per
+  priced cosmetics), the RuneScape combat rule checks (`combat-runescape-rules.test.ts`), NPCs changing floor (`npc-floor-change.test.ts`), player kits past 255 surviving the appearance block (`appearance-kit-ids.test.ts`), the dragon claws damage floor (`dragon-claws-floor.test.ts`), the store and the Detective's gear (`sinclair-store-and-gear.test.ts`), the stamina potion (`sinclair-stamina.test.ts`), and the rules checks in `sinclair-mansion.test.ts` (including the lobby: host, password, cap, bots, hand-over; rooms: one room per
   player and per mansion, host migration, a dropped player's seat, empty rooms closing; PeerJS frames splitting and
   refusing typos; and the matchmaking registry) plus the door test (north hinge, mirrored open door), including: every chore
   can be finished from empty hands (fetch, then use, paid in coins) and by left-clicking the
@@ -820,7 +822,7 @@ whole list can be played.
   early once per player per game, bots react to dragon claws, the body's clues (one a round,
   scaled by players, never ruling out the real type), the Detective has a body
   and legs but no helmet, gloves, boots or off-hand, the Murderer's kills leave blood, the PvP
-  setup (everyone the same 70/70/70 stats, only the Detective geared, claws for the Murderer, red herrings for half the household), tools lying around and respawning, death drops (never coins), the Murderer's escape (lockpick and chisel, once a round, 1.5x the clues), the last-one-standing win and no round limit, the arrest choice closing on time-up, fights only
+  setup (everyone the same stats, only the Detective geared, claws for the Murderer, red herrings for half the household), tools lying around and respawning, death drops (never coins), the Murderer's escape (lockpick and chisel, once a round, 1.5x the clues), the last-one-standing win and no round limit, the arrest choice closing on time-up, fights only
   during the investigation, killing the Murderer ends the game, the Detective never announced, a dead Detective's kit free
   for anyone and the flypaper making its holder the Detective (the Murderer too; the household
   keeping its chores), Stop and Search (once a round, pool weapons confiscated, never the claws),
@@ -855,11 +857,13 @@ Nobody hosts a server: the game is shared as a zip, and each player's copy is a 
 
 1. `yarn build:zip` (from the repository root) makes `dist/SinclairMansion.zip`, with its own
    Node.js runtime. Send it to your friends.
-2. Everyone unzips it and double-clicks **Play.cmd**: it starts that player's own game server
-   and opens `http://localhost:43594/` in the browser (`tools/package/launch.mjs`).
+2. Everyone unzips it and double-clicks **Murder at Sinclair Mansion.exe**: it starts that
+   player's own game server and opens `http://localhost:43594/` in the browser
+   (`tools/package/launcher/Launcher.cs`, which runs `tools/package/launch.mjs`).
 3. One player presses **Host** and sends the room code from the room panel; the others press
    **Join with a room code** and type it.
 
 Friends on the same network connect directly; friends over the internet connect through the
-host's browser with PeerJS (WebRTC), so nobody has to open router ports. The host keeps their
+host's browser with PeerJS (WebRTC through PeerJS's relay only, so nobody has to open router
+ports and nobody sees another player's IP address). The host keeps their
 game open while friends play. See the root README for details.

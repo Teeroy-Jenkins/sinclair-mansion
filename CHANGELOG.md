@@ -1,5 +1,18 @@
 # Patch notes
 
+## v0.2.3
+
+A documentation update. The game itself plays exactly as in v0.2.2.
+
+**Docs brought up to date**
+- The design summary (`docs/design-summary.md`) is rewritten for the current game. It used to describe the original Murder Mystery quest (the coloured thread, the poison alibis, a fixed list of six suspects), which the game doesn't use.
+- The rules (`server/gamemodes/sinclair-mansion/README.md`) now give the real numbers: games are 4 to 10 players (not 12), everyone has 75 Strength and 40 Hitpoints (not 70 and 39), the Murderer's opening kills about 83% of the time, chores pay 25 coins a step (not 15), killing someone who isn't the Murderer costs 150 coins (not 1,000), and the dragon claws special costs 70% energy (not 50%).
+- Bots vote 12 to 20 seconds after sitting down at the table (the docs said within 10 seconds).
+- Ghosts are described the same way everywhere: the dead, the wrongly arrested and late joiners, who can walk and take the stairs but don't vote.
+- Internet play is described everywhere as relay-only, so nobody sees another player's IP address. One page still said it tried a direct connection first.
+- "Playing with friends" now says to double-click **Murder at Sinclair Mansion.exe** (`Play.cmd` is gone).
+- The docs site's home page, setup guide and FAQ now point to this project's downloads, repository and issue tracker instead of XRSPS's. The setup guide explains the passwordless login. The gamemode guide lists the current files.
+
 ## v0.2.2
 
 **Bug fixes**

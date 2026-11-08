@@ -4,15 +4,15 @@
 
 ### Is there a hosted version I can play?
 
-Check the [Discord](https://discord.gg/3dzttF2q73) for public server links. You can also self-host using the [Setup Guide](/setup).
+No, and none is needed. Download `SinclairMansion.zip` from the [latest release](https://github.com/Teeroy-Jenkins/sinclair-mansion/releases/latest) and double-click the exe: your copy is its own game server. Host a room and send friends the room code, and they join over the internet with no port forwarding. To run from source, see the [Setup Guide](/setup).
 
 ### Where can I see what's being worked on?
 
-The project roadmap and task tracking is on [Trello](https://trello.com/b/UjMvJYrl/xrsps).
+What changed in each version is in [CHANGELOG.md](https://github.com/Teeroy-Jenkins/sinclair-mansion/blob/main/CHANGELOG.md). Bugs and ideas go in the [issue tracker](https://github.com/Teeroy-Jenkins/sinclair-mansion/issues).
 
 ### Can I contribute?
 
-Yes. Fork the repo, make your changes, and open a pull request. Join the [Discord](https://discord.gg/3dzttF2q73) if you have questions.
+Yes. Fork the [repo](https://github.com/Teeroy-Jenkins/sinclair-mansion), make your changes, and open a pull request. Questions about the engine itself can go to the [XRSPS project](https://github.com/xrsps/xrsps-typescript).
 
 ## Gamemodes
 

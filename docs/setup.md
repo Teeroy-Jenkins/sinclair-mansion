@@ -1,6 +1,8 @@
 # Setup Guide
 
-Get Murder at Sinclair Mansion running locally in a few minutes.
+Get Murder at Sinclair Mansion running from source in a few minutes. To just play, download
+`SinclairMansion.zip` from the [latest release](https://github.com/Teeroy-Jenkins/sinclair-mansion/releases/latest)
+instead: it needs no setup.
 
 The repository contains **`client/`**, **`server/`**, and **`docs/`** packages. The root commands install and run the server and client for you.
 
@@ -9,7 +11,7 @@ The repository contains **`client/`**, **`server/`**, and **`docs/`** packages. 
 | Tool                                                | Version      | Why                                |
 | --------------------------------------------------- | ------------ | ---------------------------------- |
 | [Node.js](https://nodejs.org/)                      | v22.16+      | Runtime for both client and server |
-| [Yarn](https://yarnpkg.com/getting-started/install) | v4.12.0      | Package manager                    |
+| [Yarn](https://yarnpkg.com/getting-started/install) | v4.12.0      | Package manager (via Corepack)     |
 | [Git](https://git-scm.com/)                         | Any recent   | Clone the repo                     |
 
 ::: tip Node Version
@@ -25,8 +27,8 @@ nvm use 22
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/xrsps/xrsps-typescript.git
-cd xrsps-typescript
+git clone https://github.com/Teeroy-Jenkins/sinclair-mansion.git
+cd sinclair-mansion
 ```
 
 ## 2. Verify Yarn
@@ -95,20 +97,11 @@ This launches the React dev server (usually on `http://localhost:3000`). Your br
 
 ## You're In
 
-Log in with a username and a password of 8 to 20 characters. The first successful login registers that username; later logins must use the same password.
+The login screen is a character designer: pick your look, type a name and press **Play**. Sinclair Mansion has no passwords (`passwordlessLogin` in the gamemode). Then **Host** a room (empty seats can be filled with bots) or **Join** one with its room code. `SINCLAIR_FAST=1` gives 60-second rounds for quick testing.
 
-### Account registration and legacy characters
+### Accounts on other gamemodes
 
-New account registration is enabled by default. Set `ALLOW_ACCOUNT_REGISTRATION=false` when you want to stop new usernames from being registered.
-
-When upgrading a server that already has `player-state.json` character saves but no account passwords, temporarily start the server with:
-
-```bash
-cd server
-ALLOW_LEGACY_ACCOUNT_CLAIM=true yarn start
-```
-
-This lets each legacy username assign a password on its next login. Disable the option again after the migration window so another person cannot claim an unclaimed character name. Existing `accounts.json` password hashes are imported automatically and do not require this option.
+Other XRSPS gamemodes log in with a username and a password of 8 to 20 characters. The first successful login registers that username; later logins must use the same password. Set `ALLOW_ACCOUNT_REGISTRATION=false` to stop new usernames from being registered, and `ALLOW_LEGACY_ACCOUNT_CLAIM=true` (temporarily) to let usernames from old `player-state.json` saves without passwords assign one on their next login.
 
 ---
 
@@ -159,3 +152,5 @@ Run the first three commands from the repository root. Package-specific maintena
 | `cd server && yarn ensure-cache` | Manually download the OSRS cache |
 | `cd client && yarn typecheck` | Typecheck the client |
 | `cd server && yarn typecheck` | Typecheck the server |
+| `cd server && yarn test:sinclair` | Run the Sinclair Mansion tests |
+| `yarn build:zip` | Build the distributable `dist/SinclairMansion.zip` (Windows) |
