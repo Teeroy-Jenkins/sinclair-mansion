@@ -172,7 +172,7 @@ browser, one save per name, and follow you to any copy of the game you play on.
   starts the player's own game server and opens the game in the browser. There is no central
   server: the host's copy is the server.
 - **Host** opens a room on your own copy (one room per copy) with a name, optional password,
-  player count and "fill empty seats with bots". It gets a 6-character room code.
+  player count and "fill empty seats with bots" (off unless ticked). It gets a 6-character room code.
 - **Join with a room code**: your copy looks in its own room, then on the LAN (direct connection),
   then over the internet with PeerJS. **Join** also lists rooms from all three.
 - **Internet play** goes through PeerJS's relay (TURN only), so nobody forwards ports and players

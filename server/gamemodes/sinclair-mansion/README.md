@@ -68,8 +68,8 @@ remembered in the browser.
   closes once the game is over, its bots go home, and anyone can host again.
 * **Nobody picks a role**: they're dealt at random. (For testing, `SINCLAIR_ROLE_PICK=1`
   brings back `::role detective|murderer|npc|random`.)
-* After a game, the "Quest complete!" scroll shows first; the overlay's **Lobby** button
-  opens the lobby window for the next game. Joining while a game runs, you watch as a
+* When a game ends, the lobby window comes straight back for the next game (the results are
+  in the chat box). Joining while a game runs, you watch as a
   ghost and play in the next one.
 * The buttons send a `sinclair_lobby` gamemode message (a new `GAMEMODE_MESSAGE` client
   packet routed to the gamemode's registered handlers), not chat, so a password never shows

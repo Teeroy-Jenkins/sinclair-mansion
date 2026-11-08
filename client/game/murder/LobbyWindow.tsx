@@ -633,7 +633,7 @@ export function LobbyWindow({ hud, playerName, onSwitchServer }: { hud: MurderHu
                         <div className="lw-subtitle">Host a game</div>
                         {!atHome && <div className="lw-hint">You'll host on your own copy of the game; friends join with your room code.</div>}
                         <SettingsForm
-                            initial={{ name: `${playerName || "My"}'s game`, maxPlayers: 8, fillWithBots: true }}
+                            initial={{ name: `${playerName || "My"}'s game`, maxPlayers: 8, fillWithBots: false }}
                             submitLabel="Host"
                             withName
                             onSubmit={host}

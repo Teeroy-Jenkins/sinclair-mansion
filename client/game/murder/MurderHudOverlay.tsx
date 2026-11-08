@@ -77,9 +77,7 @@ function VotePanel({ vote, canVote }: { vote: NonNullable<MurderHud["vote"]>; ca
 export function MurderHudOverlay({ playerName = "", onSwitchServer, client }: { playerName?: string; onSwitchServer?: SwitchServer; client?: OsrsClient }) {
     const [state, setState] = useState<MurderHudState | undefined>(getMurderHud());
     const [, setNow] = useState(0);
-    const [lobbyOpen, setLobbyOpen] = useState(false);
     const phase = state?.hud.phase;
-    useEffect(() => setLobbyOpen(false), [phase]);
 
     useEffect(() => subscribeMurderHud(setState), []);
     useEffect(() => startProgressSync(), []);
@@ -117,9 +115,9 @@ export function MurderHudOverlay({ playerName = "", onSwitchServer, client }: { 
 
     if (!state) return null;
     const { hud, receivedAt } = state;
-    // Before you've joined, and between games, it's the lobby window. Right after a game the
-    // "Quest complete!" scroll is up, so the lobby waits behind a button.
-    if (!hud.joined || hud.phase === "lobby" || (hud.phase === "gameover" && lobbyOpen)) {
+    // Before you've joined, and between games (as soon as one ends), it's the lobby window.
+    // The results are in the chat box, so there's no summary panel.
+    if (!hud.joined || hud.phase === "lobby" || hud.phase === "gameover") {
         // The cosmetic store or bank (OSRS interfaces) is open: the lobby window steps aside until it closes.
         if (hud.browsing) return null;
         return <LobbyWindow hud={hud} playerName={playerName} onSwitchServer={onSwitchServer} />;
@@ -134,50 +132,36 @@ export function MurderHudOverlay({ playerName = "", onSwitchServer, client }: { 
             <div className="mh-panel">
                 <div className="mh-title">Sinclair Mansion</div>
                 {role && <Row left="Role:" right={role.label} cls={role.cls} />}
-                {hud.phase === "gameover" ? (
+                <Row left={hud.maxRounds > 0 ? `Round ${hud.round}/${hud.maxRounds}` : `Round ${hud.round}`} right={left !== undefined ? clock(left) : undefined} cls={left !== undefined && left < 30 ? "mh-red" : "mh-white"} />
+                {hud.hasFlypaper && hud.role === "murderer" && <Row left="Flypaper:" right="You're the Detective too" cls="mh-yellow" />}
+                <Row left="Players alive:" right={`${hud.living}/${hud.players}`} />
+                {hud.points > 0 && <Row left="Coins earned:" right={hud.points.toLocaleString()} cls="mh-yellow" />}
+                {hud.crimeScene && <Row left="Body found:" right={hud.crimeScene} cls="mh-cyan" />}
+                {hud.hasFlypaper && hud.weaponType && <Row left="Weapon type:" right={hud.weaponType} cls="mh-red" />}
+                {hud.hasFlypaper && (
+                    <div className="mh-hint">
+                        {hud.stopSearch ? "Stop and Search: right-click someone (once a round)." : "You've stopped and searched someone this round."}
+                    </div>
+                )}
+                {hud.hasFlypaper && hud.clues && (
                     <>
-                        {hud.winner && <Row left="Winner:" right={hud.winner === "detective" ? "Detective" : "Murderer"} cls={hud.winner === "detective" ? "mh-yellow" : "mh-red"} />}
-                        <div className="mh-buttons mh-one">
-                            <button className="mh-start" onClick={() => setLobbyOpen(true)}>
-                                Lobby{hud.lobby ? ` (${hud.lobby.players.length}/${hud.lobby.maxPlayers})` : ""}
-                            </button>
+                        <Row left="Clues:" right={`${hud.clues.have}/${hud.clues.need}`} cls="mh-yellow" />
+                        <div className="mh-hint">
+                            {hud.clues.ready ? "Use flypaper on the body for this round's clue." : "Next clue from the body next round."}
+                            {hud.clues.have > 0 && ` Could be: ${hud.clues.possible.join(", ")}.`}
                         </div>
                     </>
-                ) : (
+                )}
+                {hud.disturbed !== undefined && <Row left="Disturbed:" right={String(hud.disturbed)} cls="mh-yellow" />}
+                {hud.escapes && (
                     <>
-                        <Row left={hud.maxRounds > 0 ? `Round ${hud.round}/${hud.maxRounds}` : `Round ${hud.round}`} right={left !== undefined ? clock(left) : undefined} cls={left !== undefined && left < 30 ? "mh-red" : "mh-white"} />
-                        {hud.hasFlypaper && hud.role === "murderer" && <Row left="Flypaper:" right="You're the Detective too" cls="mh-yellow" />}
-                        <Row left="Players alive:" right={`${hud.living}/${hud.players}`} />
-                        {hud.points > 0 && <Row left="Coins earned:" right={hud.points.toLocaleString()} cls="mh-yellow" />}
-                        {hud.crimeScene && <Row left="Body found:" right={hud.crimeScene} cls="mh-cyan" />}
-                        {hud.hasFlypaper && hud.weaponType && <Row left="Weapon type:" right={hud.weaponType} cls="mh-red" />}
-                        {hud.hasFlypaper && (
-                            <div className="mh-hint">
-                                {hud.stopSearch ? "Stop and Search: right-click someone (once a round)." : "You've stopped and searched someone this round."}
-                            </div>
-                        )}
-                        {hud.hasFlypaper && hud.clues && (
-                            <>
-                                <Row left="Clues:" right={`${hud.clues.have}/${hud.clues.need}`} cls="mh-yellow" />
-                                <div className="mh-hint">
-                                    {hud.clues.ready ? "Use flypaper on the body for this round's clue." : "Next clue from the body next round."}
-                                    {hud.clues.have > 0 && ` Could be: ${hud.clues.possible.join(", ")}.`}
-                                </div>
-                            </>
-                        )}
-                        {hud.disturbed !== undefined && <Row left="Disturbed:" right={String(hud.disturbed)} cls="mh-yellow" />}
-                        {hud.escapes && (
-                            <>
-                                {hud.escapes.map((e) => (
-                                    <Row key={e.name} left={`${e.name}:`} right={`${e.have}/${e.need}${e.hasTool ? "" : ` (need ${e.tool.toLowerCase()})`}`} cls={e.hasTool ? "mh-red" : "mh-grey"} />
-                                ))}
-                                <div className="mh-hint">{hud.escapeReady ? "Escape: work at one way out once a round, unseen." : "You've worked on your escape this round."}</div>
-                            </>
-                        )}
-                        {hud.phase === "arrest" && hud.vote && <VotePanel vote={hud.vote} canVote={hud.alive} />}
-                        {hud.winner && <Row left="Winner:" right={hud.winner === "detective" ? "Detective" : "Murderer"} cls={hud.winner === "detective" ? "mh-yellow" : "mh-red"} />}
+                        {hud.escapes.map((e) => (
+                            <Row key={e.name} left={`${e.name}:`} right={`${e.have}/${e.need}${e.hasTool ? "" : ` (need ${e.tool.toLowerCase()})`}`} cls={e.hasTool ? "mh-red" : "mh-grey"} />
+                        ))}
+                        <div className="mh-hint">{hud.escapeReady ? "Escape: work at one way out once a round, unseen." : "You've worked on your escape this round."}</div>
                     </>
                 )}
+                {hud.phase === "arrest" && hud.vote && <VotePanel vote={hud.vote} canVote={hud.alive} />}
             </div>
 
             {hud.tasks.length > 0 && (

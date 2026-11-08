@@ -1,5 +1,11 @@
 # Patch notes
 
+## v0.4.1
+
+**Lobby changes**
+- **Fill empty seats with bots** starts unchecked when you host a game. Tick it to have bots take the empty seats.
+- When a game ends, the lobby window comes straight back. The small summary panel (Role, Winner and a **Lobby** button) is gone; the results are already in the chat box.
+
 ## v0.4.0
 
 **Run energy has to last**
