@@ -34,7 +34,7 @@ remembered in the browser.
   Until you've joined a game you're not in the mansion: others can't see you and you can't
   move (and **Leave** puts you back at the gate like that). The lobby is a **room** (`rooms.ts`,
   modelled on the Impostor Among Us server's GameManager). The game is shared as a zip
-  (`yarn build:zip`, see the root README): every player runs their own copy, and a host's copy
+  (`yarn build:zip`, see `docs/developers.md`): every player runs their own copy, and a host's copy
   is the server their friends connect to.
   * **Host**: game name, optional password, players (4 to 10, people and bots together),
     **Fill empty seats with bots**, then **Host**. You always host on your own copy: pressed
@@ -47,7 +47,7 @@ remembered in the browser.
     server (`client/network/peer/PeerLink.ts`, started by `client/game/murder/PeerHosting.ts`).
     The client checks the host answers before leaving your own game.
   * **Join**: a scrolling server browser. It lists the room on the copy you're connected to,
-    rooms hosted over the internet (the PeerJS room list, see the root README), rooms other
+    rooms hosted over the internet (the PeerJS room list, see `docs/developers.md`), rooms other
     copies on your network are hosting, and servers saved by older versions (each
     checked every 4 s through that server's `/status`, so it shows the game's name, host,
     players and lock, or "Not reachable"). There is no address box: players join by room code.
@@ -866,4 +866,4 @@ Nobody hosts a server: the game is shared as a zip, and each player's copy is a 
 Friends on the same network connect directly; friends over the internet connect through the
 host's browser with PeerJS (WebRTC through PeerJS's relay only, so nobody has to open router
 ports and nobody sees another player's IP address). The host keeps their
-game open while friends play. See the root README for details.
+game open while friends play. See `docs/developers.md` for details.

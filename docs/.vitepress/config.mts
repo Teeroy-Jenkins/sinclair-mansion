@@ -22,6 +22,7 @@ export default defineConfig({
                 items: [
                     { text: 'Setup', link: '/setup' },
                     { text: 'Design summary', link: '/design-summary' },
+                    { text: 'Developer guide', link: '/developers' },
                     { text: 'FAQ', link: '/faq' },
                 ],
             },
