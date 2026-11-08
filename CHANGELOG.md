@@ -1,5 +1,13 @@
 # Patch notes
 
+## v0.2.4
+
+**Bug fixes**
+- The in-game updater no longer fails with "GitHub answered 504". GitHub's release download links (github.com/.../releases/download/...) sometimes time out with a 504 for minutes at a time. The updater now downloads through GitHub's API address for the release file, which serves the same file, and falls back to the old link. Each address gets a couple of retries when GitHub times out or answers with a server error. If GitHub's download servers are still down after that, the message says to try again in a few minutes.
+- The character designer no longer shows an invisible character when you first open the game. The preview used to draw only once, often before the model had finished loading, and then waited until you rotated it. It now redraws by itself until every part has loaded.
+
+**Updating from v0.2.3:** v0.2.3's updater still uses the old download link. If **Update now** fails with a 504, wait a few minutes and try again, or download the zip from the release page.
+
 ## v0.2.3
 
 A documentation update. The game itself plays exactly as in v0.2.2.

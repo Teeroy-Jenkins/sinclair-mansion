@@ -51,7 +51,9 @@ interface Release {
     version: string;
     notes: string;
     url: string;
-    asset: { url: string; size: number; sha256: string };
+    /** apiUrl: api.github.com/.../releases/assets/<id> (preferred: github.com's download links
+     *  sometimes answer 504 for minutes at a time); url: the browser_download_url fallback. */
+    asset: { url: string; apiUrl: string; size: number; sha256: string };
 }
 
 /** "v1.2.3" / "1.2.3-beta" -> [1, 2, 3]; undefined when it isn't a version. */
@@ -81,6 +83,14 @@ function readCurrentVersion(): string {
     return "0.0.0";
 }
 
+/** Whether a failed request is worth retrying (GitHub's gateways time out now and then). */
+function isTransient(e: unknown): boolean {
+    const status = (e as { status?: number }).status;
+    return status === undefined || status === 429 || status >= 500;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 /** GETs a URL over HTTPS, following redirects only to GitHub's own hosts. */
 function get(url: string, accept: string, redirects = 5): Promise<import("http").IncomingMessage> {
     return new Promise((resolve, reject) => {
@@ -102,7 +112,9 @@ function get(url: string, accept: string, redirects = 5): Promise<import("http")
             }
             if (status !== 200) {
                 res.resume();
-                return reject(new Error(status === 403 ? "GitHub is rate limiting update checks; try again later." : `GitHub answered ${status}.`));
+                const err = new Error(status === 403 ? "GitHub is rate limiting update checks; try again later." : `GitHub answered ${status}.`) as Error & { status: number };
+                err.status = status;
+                return reject(err);
             }
             resolve(res);
         });
@@ -111,8 +123,21 @@ function get(url: string, accept: string, redirects = 5): Promise<import("http")
     });
 }
 
+/** get() with a few retries for timeouts and 5xx answers. */
+async function getWithRetry(url: string, accept: string, tries = 3): Promise<import("http").IncomingMessage> {
+    for (let attempt = 1; ; attempt++) {
+        try {
+            return await get(url, accept);
+        } catch (e) {
+            if (attempt >= tries || !isTransient(e)) throw e;
+            logger.info(`[update] ${(e as Error).message} Retrying (${attempt}/${tries - 1})...`);
+            await sleep(1500 * attempt);
+        }
+    }
+}
+
 async function getJson(url: string): Promise<unknown> {
-    const res = await get(url, "application/vnd.github+json");
+    const res = await getWithRetry(url, "application/vnd.github+json");
     const chunks: Buffer[] = [];
     let size = 0;
     for await (const chunk of res) {
@@ -138,6 +163,7 @@ async function fetchLatestRelease(): Promise<Release> {
         url: htmlUrl,
         asset: {
             url: typeof zip?.browser_download_url === "string" ? zip.browser_download_url : "",
+            apiUrl: typeof zip?.url === "string" && zip.url.startsWith(`https://api.github.com/repos/${UPDATE_REPO}/releases/assets/`) ? zip.url : "",
             size: typeof zip?.size === "number" ? zip.size : 0,
             sha256: digest?.toLowerCase() ?? "",
         },
@@ -232,7 +258,24 @@ export class Updater {
         const marker = path.join(dir, "ready.json");
         for (const f of [partial, final, marker]) fs.rmSync(f, { force: true });
 
-        const res = await get(release.asset.url, "application/octet-stream");
+        // The API's asset address redirects to the same CDN file; github.com's download link is the
+        // fallback. Each gets a few tries.
+        const sources = [release.asset.apiUrl, release.asset.url].filter((u) => !!u);
+        let res: import("http").IncomingMessage | undefined;
+        let lastError: unknown;
+        for (const url of sources) {
+            try {
+                res = await getWithRetry(url, "application/octet-stream");
+                break;
+            } catch (e) {
+                lastError = e;
+                logger.info(`[update] Download from ${new URL(url).hostname} failed: ${(e as Error).message}`);
+            }
+        }
+        if (!res) {
+            const status = (lastError as { status?: number } | undefined)?.status;
+            throw new Error(status && status >= 500 ? `GitHub's download servers are having trouble (they answered ${status}). Try again in a few minutes.` : ((lastError as Error)?.message ?? "Couldn't download the update."));
+        }
         const total = Number(res.headers["content-length"]) || release.asset.size;
         if (total > MAX_DOWNLOAD_BYTES) throw new Error("The update is too big.");
         const hash = crypto.createHash("sha256");

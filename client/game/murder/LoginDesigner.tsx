@@ -54,6 +54,10 @@ function defaultKitIndexes(options: number[][], gender: 0 | 1): number[] {
     return GENDER_DEFAULT_KITS[gender].map((kitId, p) => Math.max(0, options[p]?.indexOf(kitId) ?? 0));
 }
 
+/** While the model parts are still streaming in, the preview redraws this often (ms), up to this many times. */
+const DRAW_RETRY_MS = 100;
+const MAX_DRAW_RETRIES = 300;
+
 /** The rotate arrows turn the model this much (of 2048) per step while held, like RuneScape's. */
 const ROTATE_STEP = 48;
 const ROTATE_EVERY_MS = 40;
@@ -121,6 +125,9 @@ export function LoginDesigner({ osrsClient }: { osrsClient: OsrsClient }) {
     const [look, setLook] = useState<Look>(loadLook);
     const [error, setError] = useState("");
     const [angle, setAngle] = useState(FRONT_ANGLE);
+    // Bumped to redraw while the cache is still streaming the model parts in. Without it the
+    // preview stayed blank on first open until something else (rotating) redrew it.
+    const [retry, setRetry] = useState(0);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rotateTimer = useRef<number | undefined>(undefined);
     const drag = useRef<{ x: number; angle: number } | undefined>(undefined);
@@ -142,6 +149,9 @@ export function LoginDesigner({ osrsClient }: { osrsClient: OsrsClient }) {
         });
         return { gender: look.gender, kits, colors: look.colors.slice() };
     }, [look, options]);
+
+    // A new look gets a fresh set of redraw tries.
+    useEffect(() => setRetry(0), [appearance]);
 
     // Once the kits have loaded, the saved look carries its kit ids too (sent at every login).
     useEffect(() => saveLook(ready ? { ...look, appearance } : look), [look, appearance, ready]);
@@ -176,13 +186,20 @@ export function LoginDesigner({ osrsClient }: { osrsClient: OsrsClient }) {
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !renderers) return;
+        if (!canvas) return;
+        const tryAgain = () => {
+            if (retry >= MAX_DRAW_RETRIES) return undefined;
+            const t = window.setTimeout(() => setRetry((r) => r + 1), DRAW_RETRY_MS);
+            return () => window.clearTimeout(t);
+        };
+        if (!renderers) return tryAgain();
+        const missesBefore = osrsClient.modelLoader?.missCount ?? 0;
         const pa = new PlayerAppearance(appearance.gender, appearance.colors, appearance.kits, new Array(14).fill(-1), { prayer: -1 } as any);
         const model = renderers.body.buildStaticModel(pa);
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
+        if (!model) return tryAgain(); // parts still streaming in: keep the last drawing until then
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!model) return; // parts still streaming in; the next frame retries
         const out = renderers.draw.renderModelInstanceToCanvasWidget(
             model,
             { xan2d: 60, yan2d: angle, zan2d: 0, zoom2d: PREVIEW_ZOOM, offsetY2d: PREVIEW_OFFSET_Y },
@@ -190,7 +207,10 @@ export function LoginDesigner({ osrsClient }: { osrsClient: OsrsClient }) {
             canvas.height,
         );
         if (out) ctx.drawImage(out.canvas, 0, 0);
-    }, [renderers, appearance, angle]);
+        // Some parts (or the drawing itself) were still missing: draw again shortly.
+        if (!out || (osrsClient.modelLoader?.missCount ?? 0) !== missesBefore) return tryAgain();
+        return undefined;
+    }, [renderers, appearance, angle, retry, osrsClient]);
 
     const cycle = (kind: "kits" | "colors", index: number, delta: number) =>
         setLook((l) => {
