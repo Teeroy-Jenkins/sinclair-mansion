@@ -1014,8 +1014,14 @@ export function createBotBrain(mover: BotMover) {
             b.nextLineAt = game.tick + secToTicks(opener ? 0.5 + Math.random() * 3 : 3 + Math.random() * 12);
         }
         if (game.phase === "result" && was === "arrest") {
-            const gone = (b.prevLiving ?? []).map((k) => game.participants.get(k)).find((q) => q && !q.alive && q.arrested);
-            if (gone && gone !== p && chance(0.35 * b.persona.chatty)) say(game, p, b, LINES.resultInnocent(gone.name, p.role === "murderer"), { reply: true });
+            // The arrest cutscene plays first; its verdict comes at the end. Only an innocent's
+            // arrest leaves a table to talk at (the Murderer's ends the game), so the line waits
+            // until after the verdict and is only queued then.
+            const scene = game.arrestScene;
+            const gone = scene?.target;
+            if (gone && gone !== p && gone.role !== "murderer" && chance(0.35 * b.persona.chatty)) {
+                say(game, p, b, LINES.resultInnocent(gone.name, p.role === "murderer"), { reply: true, delaySec: C.arrestScene.sec + 1 + Math.random() * 2 });
+            }
         }
     }
 

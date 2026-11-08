@@ -109,8 +109,10 @@ remembered in the browser.
    room (a Murderer bot leaves its own victims for someone else to find).
 2. **Investigation** (3 min). The RuneLite-style overlay shows your role, the round timer,
    how many players are alive, where the body was found (once reported), and the chore you're
-   on now (its name, then its next step and where). Run energy is topped up at the start of
-   every round.
+   on now (its name, then its next step and where). Run energy is **not** topped up between
+   rounds: what you have left when the clock strikes is what you start the next round with (it
+   comes back by walking and standing still, and from the butler's stamina potion). Everyone starts
+   each game with full run energy, and ghosts never tire.
 3. **The grandfather clock strikes.** The dining room's grandfather clock chimes, the screen
    fades to black ("*DONG* ... The grandfather clock strikes.") and everyone freezes. Every
    fight is broken off there and then, and stays off: a blow still in the air doesn't start
@@ -125,9 +127,17 @@ remembered in the browser.
    **everyone alive votes** on who to arrest, from the overlay's vote panel (or `::vote`, a
    dialog; `::arrest` does the same). The panel shows each living person with the votes
    against them so far, and "No arrest"; it never shows who voted for whom. A vote can be
-   changed. **More than half** of the living's votes for one person arrests them at once; if
-   everyone has voted, or time runs out, without that, nobody is arrested (a table of bots alone
-   talks until halfway through its time first). Ghosts don't vote. Everyone who voted for the
+   changed. Once the vote is **settled** (more than half of the living's votes for one person, or
+   everyone has voted), the table waits 20 s (`round.voteGraceSec`) before acting on it: everyone
+   is told, the panel counts down, and votes can still be changed. A change that unsettles it calls
+   the wait off. The wait never runs past the table's time; at the end (of the wait, or of the
+   time), more than half for one person arrests them, otherwise nobody is arrested (a table of bots
+   alone talks until halfway through its time before everyone having voted counts).
+   **The arrest cutscene** (`config.arrestScene`, 8 s, then the round's result): the camera turns to
+   whoever is arrested from across the table, the Detective (whoever holds the flypaper; if that's
+   them, or nobody, someone who voted for them) gets up and walks round to them, takes them by the
+   arm (2009scape's pickpocket reach, 881) while they protest (the "No" emote, 856), and they're led
+   away. Only then is it read out what they carried and whether they did it. Ghosts don't vote. Everyone who voted for the
    Murderer is paid. Bots vote too, each 12-20 s after sitting down (`C.bots.voteDelaySec`): a
    first vote needs real evidence of their own (claws, an attack, an escape attempt, a hand-off
    they saw; the Detective's notebook), otherwise they skip. Then they listen: names that keep

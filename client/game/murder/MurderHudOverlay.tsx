@@ -66,6 +66,9 @@ function VotePanel({ vote, canVote }: { vote: NonNullable<MurderHud["vote"]>; ca
                     </button>
                 )}
             </div>
+            {vote.graceLeft !== undefined && (
+                <div className="mh-hint mh-yellow">The table decides in {vote.graceLeft}s. You can still change your vote.</div>
+            )}
             {!canVote && <div className="mh-hint">Ghosts don't vote.</div>}
         </div>
     );

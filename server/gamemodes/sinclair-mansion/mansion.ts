@@ -540,6 +540,7 @@ export const LAYOUT: MansionLayout = {
     seats: SEATS,
     detectiveSpot: t(2744, 3579), // head of the table
     tableCenter: TABLE_CENTER,
+    table: { x1: 2740, y1: 3579, x2: 2743, y2: 3580 },
     weaponDrop: t(2742, 3577),
     lobbyRespawn: t(2741, 3557), // just inside the front gate
     clock: t(2742, 3582), // grandfather clock 25731

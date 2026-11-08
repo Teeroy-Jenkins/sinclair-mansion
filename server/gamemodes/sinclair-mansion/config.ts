@@ -24,6 +24,12 @@ export const MURDER_CONFIG = {
         freezeSec: 5,
         arrestSec: 60, // seated around the dining table: time to talk it over
         resultSec: 8,
+        /**
+         * Once the vote is settled (someone has more than half, or everyone has voted), the table
+         * waits this long before anything happens: votes can still be changed. It never runs past
+         * the table's own time (`arrestSec`).
+         */
+        voteGraceSec: 20,
         // No round limit: the Murderer wins by escaping (see murderer.escape*) or by being the last
         // one alive; the household wins by arresting or killing them.
     },
@@ -36,6 +42,25 @@ export const MURDER_CONFIG = {
     intro: {
         seatSec: 2.4,
         shotEndsSec: [10, 15],
+    },
+    /**
+     * The arrest cutscene, played after a vote arrests someone: the camera turns to them, the
+     * Detective (or, with no Detective at the table, someone who voted for them) gets up, walks
+     * over and takes them by the arm, and only then is it said whether they did it. Seconds from
+     * its start; the round's result (`round.resultSec`) follows it.
+     */
+    arrestScene: {
+        sec: 8,
+        /** The arrester reaches them and takes hold. */
+        grabSec: 3.6,
+        /** The second caption: they're led away. */
+        leadSec: 6,
+        /** 2009scape's pickpocket reach (881): a hand on the shoulder. */
+        grabAnim: 881,
+        /** OSRS emotes: "No" (856) for the one being arrested. */
+        protestAnim: 856,
+        /** The narration box's picture when the arrester isn't the Detective (a rope). */
+        ropeItem: 954,
     },
     detective: {
         liftSec: 30, // ~40 s with walking => ~4 lifts per round

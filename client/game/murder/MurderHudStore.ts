@@ -68,6 +68,8 @@ export interface MurderHud {
         none: number;
         tally: Array<{ key: string; name: string; votes: number; you: boolean }>;
         mine?: string | null;
+        /** The vote is settled: seconds until the table acts on it (votes can still be changed). */
+        graceLeft?: number;
     };
     /** The hosted lobby, if anyone's hosting (never includes the password). */
     lobby?: LobbyView;

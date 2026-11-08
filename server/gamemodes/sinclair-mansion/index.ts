@@ -1551,7 +1551,10 @@ class SinclairMansionGamemode extends SinclairBase {
             const player = this.humans.get(p.key);
             const services = this.services;
             if (!player || !services) return;
-            const cam = INTRO_CAMERAS[shot.camera] ?? INTRO_CAMERAS[0];
+            // The arrest cutscene brings its own camera (looking at whoever is arrested).
+            const cam = shot.look
+                ? { from: shot.look.from, height: 420, at: shot.look.at, lookHeight: 150 }
+                : INTRO_CAMERAS[shot.camera] ?? INTRO_CAMERAS[0];
             // The first shot cuts in (under the fade); the camera then glides from shot to shot.
             const cut = shot.camera === 0;
             services.camera.move(player, cam.from, cam.height, cut);
@@ -1563,7 +1566,7 @@ class SinclairMansionGamemode extends SinclairBase {
                 });
             } else {
                 services.dialog.openDialog(player, {
-                    kind: "sprite", id: "sinclair_intro", itemId: STEW, title: "Sinclair Mansion",
+                    kind: "sprite", id: "sinclair_intro", itemId: shot.itemId ?? STEW, title: shot.title ?? "Sinclair Mansion",
                     lines: shot.lines.slice(0, 3), clickToContinue: true, closeOnContinue: true,
                 });
             }
@@ -1691,8 +1694,20 @@ class SinclairMansionGamemode extends SinclairBase {
             for (const id of carry) this.services?.inventory.addItemToInventory(player, id, 1);
             this.services?.inventory.snapshotInventory(player);
         },
-        restoreRun: (p) => {
-            this.actor(p.key)?.energy.setRunEnergyUnits(RUN_ENERGY_MAX);
+        walkTo: (p, tile) => {
+            const player = this.actor(p.key);
+            if (!player) return;
+            player.releaseMovementHold();
+            if (!player.pathTo(tile.x, tile.y)) this.services?.movement.teleportPlayer(player, tile.x, tile.y, tile.level);
+        },
+        emote: (p, seq) => {
+            const player = this.actor(p.key);
+            if (player) this.services?.animation.playPlayerSeq(player, seq);
+        },
+        shout: (p, text) => {
+            // Public chat: overhead, and in the chatbox of everyone nearby.
+            const player = this.actor(p.key);
+            if (player) this.hudServices?.queueChatMessage({ messageType: "public", playerId: player.id, from: p.name, text });
         },
         chime: () => {
             // Three strikes. The peal has no loop section in the cache, so loops would only play it once.

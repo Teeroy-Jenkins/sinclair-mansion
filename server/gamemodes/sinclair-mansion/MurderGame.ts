@@ -69,8 +69,13 @@ export type Phase = "lobby" | "intro" | "investigation" | "freeze" | "arrest" | 
  */
 export interface CutsceneShot {
     camera: number;
+    /** A camera of its own instead of one from the list (the arrest cutscene looks at whoever is arrested). */
+    look?: { from: Tile; at: Tile };
     /** "guard" speaks with his chathead; without a speaker the lines are narration. */
     speaker?: "guard";
+    /** The narration box's picture and title (the opening's stew and "Sinclair Mansion" by default). */
+    itemId?: number;
+    title?: string;
     lines: string[];
 }
 
@@ -314,8 +319,12 @@ export interface GameIO {
     setupCombat(p: Participant, stats: CombatStats, wear: number[], carry: number[]): void;
     /** Back to full hitpoints (and prayer). */
     heal(p: Participant): void;
-    /** Refill run energy (every round). */
-    restoreRun(p: Participant): void;
+    /** Walk them to a tile (a person too: the arrest cutscene walks the arrester over). Teleports if there's no route. */
+    walkTo(p: Participant, tile: Tile): void;
+    /** Play an animation (sequence id) once. */
+    emote(p: Participant, seq: number): void;
+    /** Overhead text (and public chat) from anyone, bot or person. */
+    shout(p: Participant, text: string): void;
     /** The grandfather clock in the dining room chimes for everyone. */
     chime(): void;
     /** Break off any fight they're in. */
@@ -415,6 +424,8 @@ export interface MurderHud {
         none: number;
         tally: Array<{ key: string; name: string; votes: number; you: boolean }>;
         mine?: string | null;
+        /** The vote is settled: seconds until the table acts on it (votes can still be changed). */
+        graceLeft?: number;
     };
     /** The hosted lobby, if any (the lobby browser and the host's settings). */
     lobby?: LobbyView;
@@ -458,6 +469,8 @@ export interface MansionLayout {
     /** Visibility zone of a tile: living players only see people in the same zone. */
     zoneAt(tile: Tile): string;
     tableCenter: Tile;
+    /** The dining table's footprint, which nobody can stand on. */
+    table?: { x1: number; y1: number; x2: number; y2: number };
     weaponDrop: Tile;
     /** Where someone killed in a lobby brawl gets back up (inside the front gate). */
     lobbyRespawn: Tile;
@@ -562,6 +575,10 @@ export class MurderGame {
     lastFrisk = 0;
     /** At the dinner table: each voter's choice, a participant key or null for no arrest (secret). */
     readonly votes = new Map<string, string | null>();
+    /** The vote is settled (a majority, or everyone has voted): the tick the table acts on it. */
+    voteGraceEnds?: number;
+    /** The arrest cutscene playing now: who is arrested, by whom, and who voted for them. */
+    arrestScene?: { target: Participant; arrester?: Participant; votes: number; voters: string[]; start: number; stage: number };
     /** Item ids handed out for chores (removed again at the end of each round). */
     readonly toolIds: Set<number>;
     /** The Murderer's escape tools (lockpick, chisel): kept from round to round. */
@@ -1040,10 +1057,8 @@ export class MurderGame {
             if (!p.alive || p.role === "detective") p.tasks = [];
             else this.dealChores(p);
         }
-        for (const p of this.living()) {
-            this.io.restoreRun(p);
-            this.checkFetch(p); // already holding the first thing they need
-        }
+        // Run energy is not topped up between rounds: it only comes back by resting (and stamina potions).
+        for (const p of this.living()) this.checkFetch(p); // already holding the first thing they need
         this.announce(`Round ${this.round} begins. The grandfather clock strikes in ${C.round.investigationSec} seconds.`);
         for (const p of this.living()) {
             const open = p.tasks.filter((t) => t.def.steps[t.step]);
@@ -1277,6 +1292,7 @@ export class MurderGame {
             this.io.fadeIn(p);
         }
         this.votes.clear();
+        this.voteGraceEnds = undefined;
         this.announce(
             `The household gathers around the dining table. Talk it over, then vote on who to arrest: ` +
             `it takes ${this.votesNeeded()} of the ${this.living().length} votes (more than half) within ${C.round.arrestSec} seconds.`,
@@ -1338,39 +1354,177 @@ export class MurderGame {
         return undefined;
     }
 
-    /**
-     * A majority arrests at once; once everyone has voted without one, nobody is arrested. A table
-     * of bots alone (everyone left is a bot) talks it over until halfway through its time first:
-     * bots vote early and may change their minds, so their quick first votes don't end it.
-     */
-    private countVotes(): void {
+    /** Whoever has more than half of the living's votes, if anyone. */
+    private majority(): { target: Participant; votes: number } | undefined {
         const { counts } = this.voteTally();
         const needed = this.votesNeeded();
         for (const [key, n] of counts) {
             const target = this.participants.get(key);
-            if (n >= needed && target) return this.resolveArrest(target, n);
+            if (n >= needed && target?.alive) return { target, votes: n };
         }
+        return undefined;
+    }
+
+    /**
+     * The vote is settled once someone has more than half the votes, or everyone has voted. Then
+     * the table waits `C.round.voteGraceSec` (20 s) before acting on it, and votes can still be
+     * changed meanwhile; if a change unsettles it, the wait is called off. The wait never runs past
+     * the table's own time. A table of bots alone (everyone left is a bot) talks it over until
+     * halfway through its time before everyone having voted counts: bots vote early and may change
+     * their minds.
+     */
+    private countVotes(): void {
         const living = this.living();
         const talkedEnough = living.some((q) => !q.isBot) || this.tick - this.phaseStart >= secToTicks(C.round.arrestSec / 2);
-        if (talkedEnough && living.every((q) => this.votes.has(q.key))) {
-            this.announce("Everyone has voted, but nobody has more than half the votes.");
-            this.resolveArrest(undefined);
+        const allVoted = living.every((q) => this.votes.has(q.key));
+        const settled = !!this.majority() || (talkedEnough && allVoted);
+        if (settled && this.voteGraceEnds === undefined) {
+            this.voteGraceEnds = Math.min(this.phaseEnds, this.tick + secToTicks(C.round.voteGraceSec));
+            const sec = Math.max(1, Math.round(((this.voteGraceEnds - this.tick) * 600) / 1000));
+            this.announce(`${allVoted ? "Everyone has voted." : "The votes are in."} The table decides in ${sec} seconds: there's still time to change your vote.`);
+        } else if (!settled && this.voteGraceEnds !== undefined) {
+            this.voteGraceEnds = undefined;
+            this.announce("A vote has changed. The table talks on.");
         }
     }
 
-    /** The table ran out of time without a majority. */
-    private arrestTimeUp(): void {
+    /** The grace period is over, or the table's time is up: act on the votes as they stand. */
+    private settleVotes(): void {
+        this.voteGraceEnds = undefined;
         for (const p of this.living()) {
             if (p.isBot) continue;
             this.io.closeDialog(p); // don't leave the voting dialog on screen into the next round
         }
-        this.announce("Time's up! Nobody got more than half the votes.");
+        const won = this.majority();
+        if (won) return this.startArrestScene(won.target, won.votes);
+        if (this.living().every((q) => this.votes.has(q.key))) this.announce("Everyone has voted, but nobody has more than half the votes.");
+        else this.announce("Time's up! Nobody got more than half the votes.");
         this.resolveArrest(undefined);
     }
 
-    private resolveArrest(target: Participant | undefined, votes = 0): void {
-        const votedFor = (q: Participant) => target !== undefined && this.votes.get(q.key) === target.key;
-        const voters = [...this.participants.values()].filter(votedFor);
+    // ---------------------------------------------------------------- the arrest cutscene
+    /**
+     * Who takes them away: the Detective (whoever holds the flypaper), or if that's them or there's
+     * no Detective at the table, someone who voted for them, or anyone else still alive.
+     */
+    private pickArrester(target: Participant, voters: string[]): Participant | undefined {
+        const others = this.living().filter((q) => q !== target);
+        const det = others.find((q) => this.isDetective(q));
+        if (det) return det;
+        const forIt = others.filter((q) => voters.includes(q.key));
+        if (forIt.length) return pickOne(forIt);
+        return others.length ? pickOne(others) : undefined;
+    }
+
+    /** A free tile beside them, away from the table and in the same room, for the arrester to stand on. */
+    besideTarget(target: Participant): Tile | undefined {
+        const at = this.io.pos(target);
+        if (!at) return undefined;
+        const room = this.io.roomAt(at);
+        const tc = this.layout.tableCenter;
+        const tb = this.layout.table;
+        const out = Math.abs(at.x - tc.x) >= Math.abs(at.y - tc.y)
+            ? [Math.sign(at.x - tc.x) || 1, 0]
+            : [0, Math.sign(at.y - tc.y) || 1];
+        const dirs = [out, [0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]];
+        for (const [dx, dy] of dirs) {
+            const tile = { x: at.x + dx, y: at.y + dy, level: at.level };
+            if (tb && tile.x >= tb.x1 && tile.x <= tb.x2 && tile.y >= tb.y1 && tile.y <= tb.y2) continue;
+            if (this.io.roomAt(tile) !== room) continue;
+            return tile;
+        }
+        return undefined;
+    }
+
+    /**
+     * The table votes someone out: a short cutscene (2009scape's Cutscene: camera, a walk, an
+     * animation, narration on a timer) before the verdict. The camera turns to them from across
+     * the table, the arrester gets up and walks round to them, takes hold of them, and they're
+     * led away. Only at the end is it said whether they did it (`finishArrestScene`).
+     */
+    private startArrestScene(target: Participant, votes: number): void {
+        const voters = [...this.participants.values()].filter((q) => this.votes.get(q.key) === target.key).map((q) => q.key);
+        this.votes.clear();
+        const arrester = this.pickArrester(target, voters);
+        this.setPhase("result", C.arrestScene.sec + C.round.resultSec);
+        this.arrestScene = { target, arrester, votes, voters, start: this.tick, stage: 0 };
+        this.announce(`The table votes to arrest ${target.name} (${votes} of ${this.living().length} votes).`);
+        for (const p of this.living()) this.io.setFrozen(p, true);
+        const sleuth = !!arrester && this.isDetective(arrester);
+        this.sceneShot([
+            !arrester ? `The household turns to ${target.name}...`
+                : sleuth ? `The Detective, ${arrester.name}, rises from the table...`
+                : `${arrester.name} rises from the table...`,
+            `"${target.name}, you're coming with me."`,
+        ]);
+        if (arrester) {
+            this.io.setFrozen(arrester, false);
+            const beside = this.besideTarget(target);
+            if (beside) this.io.walkTo(arrester, beside);
+            this.io.shout(arrester, `${target.name}, you're coming with me.`);
+        }
+    }
+
+    /** One caption of the arrest cutscene for everyone watching, the camera on whoever is arrested. */
+    private sceneShot(lines: string[]): void {
+        const scene = this.arrestScene;
+        if (!scene) return;
+        const at = this.io.pos(scene.target) ?? this.layout.tableCenter;
+        const tc = this.layout.tableCenter;
+        // From across the table (two tiles past its middle), looking at them.
+        const from = { x: tc.x + Math.sign(tc.x - at.x) * 2, y: tc.y + Math.sign(tc.y - at.y) * 2, level: at.level };
+        const sleuth = !!scene.arrester && this.isDetective(scene.arrester);
+        const shot: CutsceneShot = {
+            camera: -1,
+            look: { from, at },
+            itemId: sleuth ? this.layout.detectiveItemId : C.arrestScene.ropeItem,
+            title: "Under arrest",
+            lines,
+        };
+        for (const p of this.participants.values()) this.io.cutscene(p, shot);
+    }
+
+    private updateArrestScene(): void {
+        const scene = this.arrestScene;
+        if (!scene) return;
+        const t = this.tick - scene.start;
+        const { target, arrester } = scene;
+        if (scene.stage === 0 && t >= secToTicks(C.arrestScene.grabSec)) {
+            scene.stage = 1;
+            if (arrester) {
+                const at = this.io.pos(target);
+                if (at) this.io.face(arrester, at);
+                this.io.emote(arrester, C.arrestScene.grabAnim);
+                this.io.setFrozen(arrester, true);
+                const here = this.io.pos(arrester);
+                if (here) this.io.face(target, here);
+            }
+            this.io.emote(target, C.arrestScene.protestAnim);
+            this.io.shout(target, pickOne(["No! You've got the wrong person!", "Unhand me!", "I didn't do it!"]));
+        }
+        if (scene.stage === 1 && t >= secToTicks(C.arrestScene.leadSec)) {
+            scene.stage = 2;
+            this.sceneShot([
+                arrester ? `${arrester.name} takes ${target.name} firmly by the arm...` : `${target.name} is taken from the table...`,
+                "...and leads them away from the table.",
+            ]);
+        }
+        if (t >= secToTicks(C.arrestScene.sec)) this.finishArrestScene();
+    }
+
+    /** The cutscene is over: the cameras come back, and the verdict is read out. */
+    private finishArrestScene(): void {
+        const scene = this.arrestScene;
+        if (!scene) return;
+        this.arrestScene = undefined;
+        for (const p of this.participants.values()) this.io.endCutscene(p);
+        // They died or left during it: there's nobody to search.
+        if (!scene.target.alive || !this.participants.has(scene.target.key)) return;
+        this.resolveArrest(scene.target, scene.votes, scene.voters);
+    }
+
+    private resolveArrest(target: Participant | undefined, votes = 0, voterKeys: string[] = []): void {
+        const voters = voterKeys.map((k) => this.participants.get(k)).filter((q): q is Participant => !!q);
         this.votes.clear();
         if (!target) {
             this.announce("Nobody is arrested this round.");
@@ -1381,7 +1535,7 @@ export class MurderGame {
         // Chore tokens and what they buy (sharks, Bind runes, prayer potions) aren't worth mentioning.
         const standard = new Set([C.tokens.itemId, C.rewards.shark, C.rewards.prayerPotion, C.rewards.staminaPotion, C.rewards.emptyVial, ...C.rewards.runes.map(([id]) => id)]);
         const items = this.io.listItems(target).filter((id) => !this.toolIds.has(id) && !standard.has(id)).map((id) => this.io.itemName(id));
-        this.announce(`The table votes to arrest ${target.name} (${votes} of ${this.living().length} votes). The Detective searches them: ${items.length ? items.join(", ") : "nothing"}.`);
+        this.announce(`${target.name} is searched (${votes} votes against them): ${items.length ? items.join(", ") : "nothing"}.`);
         const guilty = target.role === "murderer";
         this.announce(guilty ? `${target.name} WAS THE MURDERER!` : `${target.name} was innocent. They are thrown out and wander as a ghost.`);
         // Everything they carried is put on the floor. The murder weapon on an innocent
@@ -1405,7 +1559,8 @@ export class MurderGame {
             this.endGame("detective", `${target.name} was the Murderer. The household votes them out and solves the case!`);
             return;
         }
-        this.setPhase("result", C.round.resultSec);
+        // The round's result follows the cutscene (its timer was set when the cutscene began).
+        if (this.phase !== "result") this.setPhase("result", C.round.resultSec);
     }
 
     private eliminate(p: Participant, arrested: boolean): void {
@@ -1432,6 +1587,11 @@ export class MurderGame {
     }
 
     private endGame(winner: "detective" | "murderer", reason: string, noRewards = false): void {
+        if (this.arrestScene) {
+            this.arrestScene = undefined;
+            for (const p of this.participants.values()) this.io.endCutscene(p);
+        }
+        this.voteGraceEnds = undefined;
         this.phase = "gameover";
         this.winner = winner;
         for (const p of this.participants.values()) {
@@ -1663,8 +1823,10 @@ export class MurderGame {
                 this.announce(`The grandfather clock strikes in ${Math.round((left * 600) / 1000)} seconds.`);
             }
         }
-        // A table of bots that has all voted without a majority breaks up halfway through.
+        // A table of bots that has all voted without a majority settles halfway through.
         if (this.phase === "arrest" && this.tick - this.phaseStart === secToTicks(C.round.arrestSec / 2)) this.countVotes();
+        if (this.phase === "arrest" && this.voteGraceEnds !== undefined && this.tick >= this.voteGraceEnds) this.settleVotes();
+        if (this.phase === "result" && this.arrestScene) this.updateArrestScene();
         if (this.phase === "arrest" && this.phaseEnds - this.tick === secToTicks(ARREST_REMINDER_SEC)) {
             for (const p of this.living()) {
                 if (!p.isBot && !this.votes.has(p.key)) this.io.message(p, `${ARREST_REMINDER_SEC} seconds left to vote!`);
@@ -1673,7 +1835,7 @@ export class MurderGame {
         if (this.tick >= this.phaseEnds) {
             if (this.phase === "investigation") this.startFreeze();
             else if (this.phase === "freeze") this.startArrest();
-            else if (this.phase === "arrest") this.arrestTimeUp();
+            else if (this.phase === "arrest") this.settleVotes();
             else if (this.phase === "result") this.nextRoundOrEnd();
         }
     }
@@ -2602,6 +2764,7 @@ export class MurderGame {
             none,
             tally: living.map((q) => ({ key: q.key, name: q.name, votes: counts.get(q.key) ?? 0, you: q === p })),
             mine: p.alive ? this.votes.get(p.key) : undefined,
+            graceLeft: this.voteGraceEnds !== undefined ? Math.max(0, Math.ceil(((this.voteGraceEnds - this.tick) * 600) / 1000)) : undefined,
         };
     }
 

@@ -1,5 +1,19 @@
 # Patch notes
 
+## v0.4.0
+
+**Run energy has to last**
+- Run energy is no longer topped up at the start of each round. Whatever you have left when the clock strikes is what you start the next round with. It comes back the usual OSRS way, by walking and standing still, and the Demon butler's stamina potion still gives 20% back. Everyone still starts each game with full run energy, and ghosts never tire.
+
+**A grace period at the dinner table**
+- Once the vote is settled (someone has more than half the votes, or everyone has voted), the table waits 20 seconds before anything happens. Everyone is told, and the vote panel counts down ("The table decides in 15s"). Votes can still be changed during the wait.
+- If a change unsettles the vote (the majority breaks up and not everyone has voted), the wait is called off and the table talks on. When the vote settles again, a new 20-second wait starts.
+- The wait never runs past the table's own 60 seconds. When time runs out, the table acts on the votes as they stand: anyone with more than half is arrested.
+
+**The arrest cutscene**
+- When the table votes someone out, a short cutscene plays (about 8 seconds). The camera turns to them from across the table. The Detective gets up, walks round and takes them by the arm ("you're coming with me"), and they protest. If the Detective is the one arrested, or there's no Detective at the table, someone who voted for them does it.
+- Only once the cutscene is over is it said what they carried and whether they were the Murderer. Bots wait for the verdict before saying anything about it.
+
 ## v0.3.2
 
 **Bug fixes**

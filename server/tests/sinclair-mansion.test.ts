@@ -140,7 +140,9 @@ function makeWorld(opts: { humans?: string[]; pickFirst?: boolean; keepIntro?: b
             items.set(p.key, [...(items.get(p.key) ?? []), ...carry]);
         },
         heal: () => {},
-        restoreRun: () => {},
+        walkTo: (p, t) => pos.set(p.key, { ...t }),
+        emote: () => {},
+        shout: (p, t) => said.push(`${p.name}: ${t}`),
         chime: () => {
             chimes.n++;
         },
@@ -221,6 +223,10 @@ const ticksFor = (sec: number) => Math.ceil((sec * 1000) / 600) + 2;
 const run = (g: MurderGame, n: number) => {
     for (let i = 0; i < n && g.phase !== "gameover"; i++) g.update();
 };
+/** A settled vote waits out its grace period before the table acts on it. */
+const settle = (g: MurderGame) => run(g, ticksFor(C.round.voteGraceSec));
+/** ...and an arrest plays its cutscene before the verdict. */
+const arrestPlays = (g: MurderGame) => run(g, ticksFor(C.round.voteGraceSec) + ticksFor(C.arrestScene.sec));
 let passed = 0;
 const check = (name: string, fn: () => void) => {
     fn();
@@ -726,6 +732,9 @@ check("search leaves a print and a disturbed marker; both reset next round", () 
     run(w.game, 2 + ticksFor(C.round.freezeSec));
     assert.equal(w.game.phase, "arrest");
     for (const p of w.game.living()) w.game.vote(p, null);
+    assert.equal(w.game.phase, "arrest", "everyone has voted: the table waits out the grace period");
+    assert.ok(w.game.hudFor(host).vote!.graceLeft! > 0, "the overlay counts the grace period down");
+    settle(w.game);
     assert.equal(w.game.phase, "result", "everyone voted for no arrest");
     run(w.game, ticksFor(C.round.resultSec));
     assert.equal(w.game.round, 2);
@@ -990,7 +999,9 @@ check("arresting an innocent holder drops the murder weapon publicly with its pr
     wpn.prints.add(npc.name);
     w.game.phaseEnds = w.game.tick + 1;
     run(w.game, 2 + ticksFor(C.round.freezeSec));
+    w.game.botThink = undefined; // nobody changes their vote meanwhile
     for (const p of w.game.living()) if (p !== npc && w.game.phase === "arrest") w.game.vote(p, npc.key);
+    arrestPlays(w.game);
     assert.ok(det.alive);
     assert.equal(npc.alive, false);
     assert.equal(wpn.at.kind, "ground");
@@ -1371,6 +1382,7 @@ check("chores and the tools in hand carry over from round to round", () => {
     w.game.phaseEnds = w.game.tick + 1;
     run(w.game, 2 + ticksFor(C.round.freezeSec));
     for (const p of w.game.living()) w.game.vote(p, null);
+    settle(w.game);
     run(w.game, ticksFor(C.round.resultSec));
     assert.equal(w.game.round, 2);
     assert.equal(host.tasks[0].def, def, "the same chores");
@@ -1534,6 +1546,24 @@ check("everyone alive votes; more than half arrests, and only the totals are sho
     w.game.vote(a, m.key);
     assert.equal(w.game.hudFor(host).vote!.tally.find((t) => t.key === host.key)?.votes, 0);
     w.game.vote(c, m.key);
+    assert.equal(w.game.phase, "arrest", "a majority waits out the grace period");
+    assert.ok(m.alive);
+    // A change that breaks the majority calls the wait off; voting back starts it again.
+    w.game.vote(c, null);
+    assert.equal(w.game.voteGraceEnds, undefined, "no majority, not everyone voted: the table talks on");
+    w.game.vote(c, m.key);
+    assert.ok(w.game.voteGraceEnds !== undefined);
+    settle(w.game);
+    assert.equal(w.game.phase, "result", "the arrest cutscene");
+    assert.ok(w.game.arrestScene, "the cutscene is playing");
+    assert.ok(m.alive, "the verdict waits for the end of the cutscene");
+    assert.ok(!w.announcements.some((a) => a.includes("WAS THE MURDERER")), "nobody is told yet");
+    const arrester = w.game.arrestScene!.arrester!;
+    assert.ok(arrester && arrester !== m, "someone else arrests them");
+    if (w.game.detective()?.alive && w.game.detective() !== m) assert.equal(arrester, w.game.detective(), "the Detective arrests them");
+    assert.ok(w.shots.some((s) => s.shot.look && s.shot.lines.some((l) => l.includes(m.name))), "the camera turns to them");
+    run(w.game, ticksFor(C.arrestScene.sec));
+    assert.ok(w.cameraReset.length > 0, "the cameras come back");
     assert.equal(m.alive, false, "4 of 6 arrests");
     assert.equal(w.game.phase, "gameover", "the Murderer is caught");
     assert.equal(w.game.winner, "detective");

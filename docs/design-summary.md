@@ -37,8 +37,12 @@ Roles are dealt at random; nobody picks one. A game has 4–10 players (people a
    the grandfather clock once per game to end it early.
 4. **The clock strikes**: the screen fades to black and everyone is seated at the dining table.
 5. **The dinner table** (60 s): talk in chat, then everyone alive votes from the overlay's vote
-   panel. More than half of the living's votes for one person arrests them at once; otherwise
-   nobody is arrested. The panel shows the running totals, never who voted for whom.
+   panel. Once more than half of the living's votes are on one person, or everyone has voted, the
+   table waits 20 s (votes can still be changed), then arrests whoever has more than half;
+   otherwise nobody is arrested. The panel shows the running totals, never who voted for whom.
+   An arrest plays a short cutscene: the Detective (or, with no Detective, someone who voted for
+   them) walks over and takes them away, and only then is it said whether they did it.
+   Run energy is not topped up between rounds.
 
 There is no round limit. Rounds repeat until the Murderer is arrested or killed (the household
 wins), or the Murderer escapes or is the last one alive (the Murderer wins). Kills are never
