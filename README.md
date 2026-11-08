@@ -20,7 +20,7 @@ One of the Sinclair household killed Lord Sinclair. Everyone else does their cho
 # How to Play
 
 ## **Roles:**
-- **The Detective** should study the body to look for clues and dust weapons for fingerprints with the **Fly Paper**. They can also stop and search people once per round.
+- **The Detective** should investigate the body(s) to look for clues and dust weapons for fingerprints with the **Fly Paper**. They can also stop and search people once per round.
 - **The Murderer** might hide the murder weapon, or plant the murder weapon on another player! Pickpocket it back even. Ambush people with **dragon claws**, or find a way to escape the grounds.
 - **The Household** will do chores and keep their eyes open! Gain IOU's that can be spent on items to help survive the chaos...
 
