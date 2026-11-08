@@ -1134,6 +1134,13 @@ check("Stop and Search: once a round, the Detective confiscates pool weapons (ne
     assert.equal(w.game.hudFor(m).stopSearch, undefined);
     w.game.stopAndSearch(m, det.key); // only the Detective can
     assert.equal(m.action, undefined);
+    // Not before the first clue: they're told so, and the round's search isn't used up.
+    w.game.caseFile.clues = 0;
+    w.game.stopAndSearch(det, m.key);
+    assert.equal(m.heldBy, undefined, "no clues, no search");
+    assert.ok(w.inbox.get(det.key)?.some((x) => /don't even have any clues yet/.test(x)), "the Detective is told why");
+    assert.ok(w.game.hudFor(det).stopSearch, "the search is still there for later");
+    w.game.caseFile.clues = 1;
     w.game.stopAndSearch(det, m.key);
     assert.equal(m.heldBy, det.key, "they're stopped where they stand");
     run(w.game, ticksFor(C.detective.stopSearchSec));

@@ -72,7 +72,7 @@ announced: the victim is told, everyone else only sees the living count drop.
 - **Studies the victims.** Everyone the Murderer kills leaves a body in their blood, which anyone
   can report. Each victim's body gives the Detective one extra clue, once.
 - **Lifts prints** with the flypaper from weapons, furniture and people (30 s).
-- **Stop and Search**, once a round: holds someone for 3 s and confiscates every pool weapon they
+- **Stop and Search**, once a round and only after the Detective has found at least one clue: holds someone for 3 s and confiscates every pool weapon they
   carry. The dragon claws are hidden too well to be found.
 - Handles evidence with care: no prints of theirs go on what they take, and the prints already
   on it go into their notebook.

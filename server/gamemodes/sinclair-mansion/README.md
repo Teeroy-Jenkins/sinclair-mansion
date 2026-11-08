@@ -185,7 +185,8 @@ knew the weapon was in its pack notices when it's gone.
   the body) carries over to whoever holds it.
 * **Chores stay as they were.** The Detective dealt at the start has none; someone of the household
   who picks up the flypaper keeps theirs (bots split their time between the case and their chores).
-* **Stop and Search** (once a round, during the investigation): the Detective right-clicks a person
+* **Stop and Search** (once a round, during the investigation, and only once the Detective has at
+  least one clue from a body; before that they're told they have no clues yet): the Detective right-clicks a person
   and picks **Stop and Search** (`check.ts`; a `sinclair_search` gamemode message). They're held
   still for 3 s (`detective.stopSearchSec`) while the Detective goes through their pockets
   (2009scape's pickpocket animation, 881), and every weapon from the pool they carry or wield is
@@ -577,7 +578,7 @@ after 30 s). It is no longer a hiding place. The buttered-potato chore starts by
 | Murderer | Right-click your weapon, **Use**, then click a stash spot (any furniture with a search-type option) to hide it there, or a person to hand it over (3 s; people nearby in the same room see it, but not what was handed). |
 | Everyone alive | Left-click an unreported body (**Report**, once) to tell the house where it is. |
 | Household | Search furniture. A weapon you find is taken at once (with room in your pack) and announced to everyone. `::report` reports a weapon you're holding. Reports reach only the Detective. |
-| Detective (whoever holds the flypaper) | Left-click a reported body (**Investigate**) or **Use** flypaper on it or its blood (a clue to the weapon type, 25 s: Lord Sinclair's one a round, each victim's one, once), on furniture or on a person (prints, 30 s, stay put). Right-click a person, **Stop and Search** (once a round) to confiscate their weapons. Results go to the chatbox, the overlay and `::notes`. |
+| Detective (whoever holds the flypaper) | Left-click a reported body (**Investigate**) or **Use** flypaper on it or its blood (a clue to the weapon type, 25 s: Lord Sinclair's one a round, each victim's one, once), on furniture or on a person (prints, 30 s, stay put). Right-click a person, **Stop and Search** (once a round, after the first clue) to confiscate their weapons. Results go to the chatbox, the overlay and `::notes`. |
 | Ghosts | The dead, the wrongly arrested and anyone who joins mid-game are invisible to the living. They can walk, watch and take the stairs and ladders but touch nothing else, don't vote, and their public chat only reaches other ghosts. |
 
 Hovering over anything you can interact with shows its left-click option by the cursor, like RuneLite's Mouse Tooltips (`MouseTooltips` in `client/game/murder/MurderExtras.tsx`). OSRS's own cursor tooltip (a cache interface) is told there is at most one option, so it never adds "+N options" (`MINIMENU_NUMOPS` in `client/rs/cs2/handlers/ClientOps.ts`). Menus no longer show "(ID: ...)".

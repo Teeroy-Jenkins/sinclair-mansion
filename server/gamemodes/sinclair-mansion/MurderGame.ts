@@ -1993,12 +1993,14 @@ export class MurderGame {
     /**
      * Stop and Search: once a round the Detective stops someone and goes through their pockets,
      * confiscating any weapon from the pool they carry or wield. The Murderer's dragon claws are
-     * hidden too well to be found (they aren't from the pool).
+     * hidden too well to be found (they aren't from the pool). The Detective needs at least one
+     * clue from a body first.
      */
     stopAndSearch(p: Participant, targetKey: string): void {
         if (!this.isDetective(p)) return this.io.message(p, "Only the Detective can do that.");
         if (this.phase !== "investigation") return this.io.message(p, "Not now: wait for the investigation.");
         if (this.lastFrisk === this.round) return this.io.message(p, "You've already stopped and searched someone this round.");
+        if (this.caseFile.clues < 1) return this.io.message(p, "I don't even have any clues yet, I can't just start searching people");
         const t = this.participants.get(targetKey);
         if (!t || !t.alive || t === p) return this.io.message(p, "You can't search them.");
         if (t.heldBy) return this.io.message(p, "Someone is already searching them.");

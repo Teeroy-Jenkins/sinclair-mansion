@@ -1,5 +1,11 @@
 # Patch notes
 
+## v0.3.1
+
+**Stop and Search needs a clue first**
+- The Detective can't Stop and Search anyone until they've found at least one clue on a body. Trying earlier gets the message "I don't even have any clues yet, I can't just start searching people", and the round's search isn't used up.
+- Bot Detectives wait for their first clue before frisking anyone, and a bot Murderer doesn't get nervous about being searched until then.
+
 ## v0.3.0
 
 **Bodies have to be found**

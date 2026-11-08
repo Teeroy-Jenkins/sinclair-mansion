@@ -1129,7 +1129,7 @@ export function createBotBrain(mover: BotMover) {
         // The Detective's about with a Stop and Search to spare: a killer keeping it thinks again.
         if (held && b.keepWeapon) {
             const det = game.detective();
-            if (det && det !== p && inView(game, p).includes(det) && game.lastFrisk !== game.round && chance(0.2)) {
+            if (det && det !== p && inView(game, p).includes(det) && game.lastFrisk !== game.round && game.caseFile.clues > 0 && chance(0.2)) {
                 b.keepWeapon = false;
                 b.weaponAt = game.tick;
             }
@@ -1286,7 +1286,7 @@ export function createBotBrain(mover: BotMover) {
         const r = game.lastReport;
         // Once a round: Stop and Search the likeliest suspect, whoever was last heard to have found
         // a weapon, or now and then someone close by.
-        if (game.canFrisk(p)) {
+        if (game.canFrisk(p) && game.caseFile.clues > 0) {
             const finder = r && r.round === game.round && r.kind === "participant" ? game.participants.get(r.id) : undefined;
             const near = inView(game, p);
             const suspect = top && topScore >= 3 ? top
