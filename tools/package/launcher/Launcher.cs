@@ -172,7 +172,7 @@ class GameWindow : Form
         };
         var subtitle = new Label
         {
-            Text = "Your own copy of the game: friends join it with your room code.",
+            Text = "Built on xRSPS",
             ForeColor = Muted,
             AutoSize = true,
             Location = new Point(80, 50),

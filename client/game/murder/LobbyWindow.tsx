@@ -203,7 +203,6 @@ async function probe(address: string): Promise<Row> {
 function ServerBrowser({ hud, onBack, onSwitchServer, onRoomCode }: { hud: MurderHud; onBack: () => void; onSwitchServer?: SwitchServer; onRoomCode?: () => void }) {
     const [selected, setSelected] = useState<string | undefined>();
     const [password, setPassword] = useState("");
-    const [direct, setDirect] = useState("");
     const [saved, setSaved] = useState<SavedServer[]>(loadSaved);
     const [probed, setProbed] = useState<Record<string, Row>>({});
     const [mmServers, setMmServers] = useState<ServerEntry[]>([]);
@@ -261,15 +260,6 @@ function ServerBrowser({ hud, onBack, onSwitchServer, onRoomCode }: { hud: Murde
             pendingProbes.clear();
         };
     }, [saved]);
-    const save = (address: string) => {
-        const existing = saved.find((s) => s.address === address);
-        const next: SavedServer[] = existing
-            ? saved.map((s) => (s.address === address ? { ...s, address } : s))
-            : [{ address, label: generateLabel(address) }, ...saved];
-        storeSaved(next);
-        setSaved(next);
-        setSelected(address);
-    };
     const forget = (address: string) => {
         const next = saved.filter((s) => s.address !== address);
         storeSaved(next);
@@ -327,9 +317,6 @@ function ServerBrowser({ hud, onBack, onSwitchServer, onRoomCode }: { hud: Murde
         ...net.map((s) => ({ ...s, here: false, label: s.name, internet: true })),
     ];
     const pick = rows.find((r) => rowKey(r) === selected);
-    // A typed address, with the default game port if none was given.
-    const typed = direct.trim().replace(/^(wss?|https?):\/\//i, "").replace(/\/.*$/, "");
-    const address = typed && (/:\d+$/.test(typed) ? typed : `${typed}:${DEFAULT_PORT}`);
     const join = (row: Row) => {
         if (row.here) return lobby("join", { password, roomCode: row.roomCode });
         if (!row.internet) return goTo(row.address, password, row.roomCode, onSwitchServer);
@@ -374,16 +361,6 @@ function ServerBrowser({ hud, onBack, onSwitchServer, onRoomCode }: { hud: Murde
                 <>
                     <button className="lw-small" onClick={() => forget(pick.address)}>Remove from list</button>
                     <button className="lw-small" onClick={rename}>Rename</button>
-                </>
-            )}
-            <label>
-                <span>Address</span>
-                <input value={direct} maxLength={64} placeholder="host:port" onChange={(e) => setDirect(e.target.value)} />
-            </label>
-            {address && (
-                <>
-                    <button className="lw-small" onClick={() => save(address)}>Add to list</button>
-                    <button className="lw-small" onClick={() => goTo(address, password, undefined, onSwitchServer)}>Connect now</button>
                 </>
             )}
             {pick?.locked && (
@@ -475,7 +452,7 @@ function ShareBox({ roomCode, sharing }: { roomCode?: string; sharing: boolean }
     const copy = () => void navigator.clipboard?.writeText(roomCode).then(() => setCopied(true), () => {});
     const note = !sharing
         ? "Friends join with this room code while the game's host keeps their game open."
-        : peer === "ready" ? "Send this code to your friends: it works over the internet and at home. Keep this game open while you play."
+        : peer === "ready" ? "Send this code to your friends!"
         : typeof peer === "object" ? `${peer.error} Friends on your network can still join from the Join list.`
         : "Connecting to the internet so friends can join...";
     return (

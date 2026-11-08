@@ -47,9 +47,9 @@ remembered in the browser.
     server (`client/network/peer/PeerLink.ts`, started by `client/game/murder/PeerHosting.ts`).
     The client checks the host answers before leaving your own game.
   * **Join**: a scrolling server browser. It lists the room on the copy you're connected to,
-    rooms other copies on your network are hosting, and addresses you **Add to list** (each
+    rooms other copies on your network are hosting, and servers saved by older versions (each
     checked every 4 s through that server's `/status`, so it shows the game's name, host,
-    players and lock, or "Not reachable"). **Connect now** goes straight to an address.
+    players and lock, or "Not reachable"). There is no address box: players join by room code.
   * Joining a room on another copy logs you out here and back in there with the same name,
     then joins it (password included). If that login fails, or the host doesn't answer
     within 30 s, the login screen points back at your own copy.

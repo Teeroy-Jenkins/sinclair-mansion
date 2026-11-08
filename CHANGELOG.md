@@ -1,5 +1,12 @@
 # Patch notes
 
+## v0.2.1
+
+**Interface**
+- The launcher window's subtitle now reads "Built on xRSPS".
+- The **Join a game** browser no longer has an **Address** box (or its **Add to list** and **Connect now** buttons). Players join by room code or from the list.
+- The lobby's room code note now simply says "Send this code to your friends!"
+
 ## v0.2.0
 
 **Updates in the game**
