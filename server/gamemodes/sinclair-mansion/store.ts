@@ -153,14 +153,35 @@ export class SinclairStore {
         this.ss.sendInventorySnapshot(player.id);
     }
 
+    /**
+     * Whether this player's shop is really on screen. The shop manager remembers the last shop a
+     * player opened until its own close runs, which a modal closed some other way (a dialog, the
+     * game starting) skips: without this, buy and sell would still work with no shop in view, and
+     * the cosmetic store mid-game. A stale shop is forgotten.
+     */
+    private shopOnScreen(player: PlayerState): boolean {
+        const shopId = this.shop.manager.getShopIdForPlayer(player);
+        if (!shopId) return false;
+        const onScreen = this.ss.getInterfaceService()?.getCurrentModal(player) === SHOP_INTERFACE_ID;
+        const allowed = onScreen && (shopId !== COSMETIC_SHOP_ID || !this.canBrowse(player));
+        if (!allowed) this.shop.manager.closeShopForPlayer(player);
+        return allowed;
+    }
+
     /** The shop buttons, with the butler's rules: tokens, no buying back. */
     private butlerShopping(shopping: ShoppingServices): ShoppingServices {
         const noSale = (player: PlayerState) => this.message(player, "The butler doesn't buy anything back.");
         const tokensText = (n: number) => (n === 1 ? "1 IOU" : `${n} IOUs`);
         return {
             ...shopping,
-            buyFromShop: (player, params) => (this.atButler(player) ? this.buyFromButler(player, params) : shopping.buyFromShop?.(player, params)),
-            sellToShop: (player, params) => (this.atButler(player) ? noSale(player) : shopping.sellToShop?.(player, params)),
+            buyFromShop: (player, params) => {
+                if (!this.shopOnScreen(player)) return;
+                return this.atButler(player) ? this.buyFromButler(player, params) : shopping.buyFromShop?.(player, params);
+            },
+            sellToShop: (player, params) => {
+                if (!this.shopOnScreen(player)) return;
+                return this.atButler(player) ? noSale(player) : shopping.sellToShop?.(player, params);
+            },
             getShopSlotValue: (player, slotIndex) => {
                 if (!this.atButler(player)) return shopping.getShopSlotValue?.(player, slotIndex);
                 const info = this.shop.manager.getShopSlotValue(player, slotIndex);

@@ -13,6 +13,8 @@ export const PROGRESS_VERSION = 1;
 const MAX_STACK = 2_147_483_647;
 const PACK_SLOTS = 28;
 const EQUIP_SLOTS = 14;
+/** The bank's slots (0..1409); a save never needs more entries than that. */
+const BANK_SLOTS = 1410;
 
 export interface Progress {
     v: number;
@@ -58,27 +60,36 @@ export function parseProgress(raw: unknown): Progress | undefined {
     const r = raw as Record<string, unknown>;
     if (r.v !== PROGRESS_VERSION || !Array.isArray(r.pack) || !Array.isArray(r.worn) || !Array.isArray(r.bank)) return undefined;
     const pack: Progress["pack"] = [];
-    for (const e of r.pack) {
+    // One entry per slot: a save is never longer than the pack, the gear or the bank (a giant
+    // or repeated list would only bloat every HUD packet after it).
+    const packSlots = new Set<number>();
+    for (const e of r.pack.slice(0, PACK_SLOTS * 2)) {
         if (!Array.isArray(e)) continue;
         const slot = int(e[0], 0, PACK_SLOTS - 1);
         const id = int(e[1], 1, MAX_STACK);
         const qty = int(e[2], 1, MAX_STACK);
-        if (slot === undefined || id === undefined || qty === undefined || !carried(id)) continue;
+        if (slot === undefined || id === undefined || qty === undefined || !carried(id) || packSlots.has(slot)) continue;
+        packSlots.add(slot);
         pack.push([slot, id, id === COINS ? qty : 1]);
     }
     const worn: Progress["worn"] = [];
-    for (const e of r.worn) {
+    const wornSlots = new Set<number>();
+    for (const e of r.worn.slice(0, EQUIP_SLOTS * 2)) {
         if (!Array.isArray(e)) continue;
         const slot = int(e[0], 0, EQUIP_SLOTS - 1);
         const id = int(e[1], 1, MAX_STACK);
-        if (slot !== undefined && id !== undefined && isCosmetic(id)) worn.push([slot, id]);
+        if (slot === undefined || id === undefined || !isCosmetic(id) || wornSlots.has(slot)) continue;
+        wornSlots.add(slot);
+        worn.push([slot, id]);
     }
     const bank: BankSnapshotEntry[] = [];
-    for (const e of r.bank as Array<Record<string, unknown>>) {
-        const slot = int(e?.slot, 0, 1409);
+    const bankSlots = new Set<number>();
+    for (const e of (r.bank as Array<Record<string, unknown>>).slice(0, BANK_SLOTS * 2)) {
+        const slot = int(e?.slot, 0, BANK_SLOTS - 1);
         const itemId = int(e?.itemId, 1, MAX_STACK);
         const quantity = int(e?.quantity, 0, MAX_STACK);
-        if (slot === undefined || itemId === undefined || quantity === undefined || !carried(itemId)) continue;
+        if (slot === undefined || itemId === undefined || quantity === undefined || !carried(itemId) || bankSlots.has(slot)) continue;
+        bankSlots.add(slot);
         bank.push({ slot, itemId, quantity, placeholder: e.placeholder === true, filler: false, tab: int(e.tab, 0, 9) ?? 0 });
     }
     return { v: PROGRESS_VERSION, name: typeof r.name === "string" ? r.name : "", pack, worn, bank };

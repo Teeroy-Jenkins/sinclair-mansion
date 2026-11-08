@@ -630,7 +630,11 @@ export class WSServer {
                         if (url === "/exit") {
                             const addr = req.socket.remoteAddress ?? "";
                             const loopback = addr === "127.0.0.1" || addr === "::1" || addr === "::ffff:127.0.0.1";
-                            if (req.method !== "POST" || !loopback || req.headers["x-sinclair-exit"] !== "1") {
+                            // As the updater: a localhost page only (a site that rebinds its name to
+                            // 127.0.0.1 still sends its own Origin).
+                            const origin = req.headers.origin;
+                            const localOrigin = !origin || /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(origin);
+                            if (req.method !== "POST" || !loopback || !localOrigin || req.headers["x-sinclair-exit"] !== "1") {
                                 res.writeHead(403);
                                 res.end();
                                 return;

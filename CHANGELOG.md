@@ -1,5 +1,28 @@
 # Patch notes
 
+## v0.2.2
+
+**Bug fixes**
+- Picking up a chore tool with a full pack no longer makes it disappear. It stays on the floor and you're told your pack is full. The same goes for bots.
+- Searching furniture with a full pack leaves the tools you couldn't carry in the furniture, instead of losing them until they respawned.
+- Shop buttons only work while the shop is actually on screen. Before, if the shop closed some other way (a dialog, or a game starting), you could still buy and sell, even from the cosmetic store during a game.
+
+**Safety**
+- The character look you send is checked against the character designer's own options. A made-up look can no longer show other players a broken model.
+- Progression saves from the browser are limited to one entry per pack, gear and bank slot, so an oversized save can't bloat every HUD update.
+- Web pages can no longer add rooms to your game's room list (the matchmaking registry). Before, any site you visited could list fake rooms or claim a real room code. Real game servers still register as before.
+- **Exit Game** now also checks that the request comes from the game's own page, like the updater already did.
+
+**Performance**
+- Bots find their way with fewer pathfinding searches. Each failed route used to search every target tile twice.
+- The view-distance check that runs for every pair of players each tick does each lookup once instead of up to three times.
+- Big HUD updates are compressed (about 13 KB down to 1 KB). This mostly helps internet games, which go through the PeerJS relay. It also stops a very large HUD from overflowing its packet.
+- The browser caches the game's files properly: unchanged files get a quick "not modified" answer, and the build's hashed files are kept for good. Reloading the page is faster.
+- The overlay's countdown only redraws while there's a timer, and your progression is only written to browser storage when it changes, not on every update.
+
+**Smaller download**
+- The zip leaves out the web client's source maps and the TypeScript compiler and type packages. The game never used them at runtime, and leaving them out saves about 50 MB unpacked.
+
 ## v0.2.1
 
 **Interface**

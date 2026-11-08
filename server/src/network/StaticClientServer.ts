@@ -102,14 +102,27 @@ export class StaticClientServer {
     }
 
     private send(req: IncomingMessage, res: ServerResponse, file: string, stat: fs.Stats): boolean {
+        const etag = `"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+        // The build's static/ files carry a content hash in their names (main.<hash>.js), so they
+        // never change under the same name: the browser can keep them for good.
+        const hashed = file.startsWith(path.join(this.clientDir, "static") + path.sep);
         const headers: Record<string, string | number> = {
             ...ISOLATION,
             "Content-Type": TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream",
             "Accept-Ranges": "bytes",
-            ETag: `"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`,
+            ETag: etag,
             "Last-Modified": stat.mtime.toUTCString(),
-            "Cache-Control": file.endsWith("index.html") ? "no-cache" : "public, max-age=3600",
+            "Cache-Control": file.endsWith("index.html") ? "no-cache" : hashed ? "public, max-age=31536000, immutable" : "public, max-age=3600",
         };
+        // Unchanged since the browser last fetched it (index.html on every load, the rest once
+        // their hour is up): answer 304 instead of sending it all again.
+        const ifNoneMatch = req.headers["if-none-match"];
+        if (ifNoneMatch && !req.headers.range && ifNoneMatch.split(",").some((t) => t.trim().replace(/^W\//, "") === etag)) {
+            const { "Content-Type": _type, "Accept-Ranges": _ranges, ...notModified } = headers;
+            res.writeHead(304, notModified);
+            res.end();
+            return true;
+        }
         // The client streams the 200 MB cache file in pieces (HTTP Range).
         const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? "");
         if (range && (range[1] || range[2])) {

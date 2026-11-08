@@ -15,9 +15,15 @@ function load(name: string): unknown {
     }
 }
 
+/** What was last written for each name: every HUD carries the save, but it rarely changes. */
+const lastSaved = new Map<string, string>();
+
 function save(name: string, progress: unknown): void {
     try {
-        window.localStorage.setItem(STORAGE_PREFIX + name, JSON.stringify(progress));
+        const text = JSON.stringify(progress);
+        if (lastSaved.get(name) === text) return;
+        window.localStorage.setItem(STORAGE_PREFIX + name, text);
+        lastSaved.set(name, text);
     } catch {}
 }
 

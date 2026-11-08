@@ -10,7 +10,8 @@ import { getMatchmakingRegistry, sanitizeEntry } from "./registry";
 
 const CORS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    // Reading is open to any page; registering is for servers only (see below).
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
 };
 const MAX_BODY = 16 * 1024;
@@ -33,6 +34,13 @@ export function handleMatchmaking(req: IncomingMessage, res: ServerResponse, res
         res.writeHead(204, CORS);
         res.end();
     } else if (url.pathname === "/matchmaking/register" && req.method === "POST") {
+        // Servers post their heartbeat from Node, which sends no Origin; a browser always does. A
+        // web page (any site the player visits can reach localhost) must not list fake rooms or
+        // claim a real room code to redirect its players elsewhere.
+        if (req.headers.origin !== undefined) {
+            json(res, 403, { error: "Only game servers can register." });
+            return true;
+        }
         let body = "";
         req.setEncoding("utf8");
         req.on("data", (chunk: string) => {

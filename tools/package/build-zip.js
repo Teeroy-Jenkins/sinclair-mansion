@@ -28,7 +28,16 @@ const dist = path.join(repo, "dist");
 const stage = path.join(dist, "SinclairMansion");
 const game = path.join(stage, "game");
 
-const copy = (from, to) => fs.cpSync(path.join(repo, from), path.join(game, to ?? from), { recursive: true, dereference: true });
+const copy = (from, to, filter) => fs.cpSync(path.join(repo, from), path.join(game, to ?? from), { recursive: true, dereference: true, filter });
+// Only what the game runs on goes in the zip. The web client's source maps (~20 MB) are for
+// debugging a build, and the TypeScript compiler and type packages (~32 MB) for type checking:
+// the server runs its .ts files through tsx (esbuild), which needs neither.
+const DEV_ONLY_PACKAGES = new Set(["typescript", "@types", "undici-types"]);
+const noSourceMaps = (src) => !src.endsWith(".map");
+const runtimePackages = (src) => {
+    const rel = path.relative(path.join(repo, "server", "node_modules"), src).split(path.sep);
+    return !DEV_ONLY_PACKAGES.has(rel[0]) && !rel.includes(".cache");
+};
 const exeName = "Murder at Sinclair Mansion.exe";
 
 if (process.platform !== "win32") throw new Error("The zip bundles this machine's node.exe and a Windows launcher: build it on Windows.");
@@ -50,8 +59,8 @@ fs.copyFileSync(process.execPath, path.join(game, "node", "node.exe"));
 for (const dir of ["src", "gamemodes", "extrascripts", "data", "caches"]) copy(`server/${dir}`);
 for (const file of ["config.json", "package.json", "tsconfig.json"]) copy(`server/${file}`);
 for (const dir of ["common", "rs", "custom", "ui"]) copy(`client/${dir}`);
-copy("client/build", "web");
-copy("server/node_modules", "node_modules");
+copy("client/build", "web", noSourceMaps);
+copy("server/node_modules", "node_modules", runtimePackages);
 // Saved players (game.sqlite*) belong to whoever built the zip, not to the friends who get it.
 for (const dir of fs.readdirSync(path.join(game, "server", "data", "gamemodes"))) {
     const at = path.join(game, "server", "data", "gamemodes", dir);

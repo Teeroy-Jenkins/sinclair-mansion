@@ -8,6 +8,7 @@ import type {
     HandshakeBridge,
 } from "../../src/game/gamemodes/GamemodeDefinition";
 import { MUSIC_UNLOCK_VARPS, VARP_MASTER_VOLUME, VARP_SPECIAL_ATTACK } from "../../../client/common/vars";
+import { PLAYER_BODY_RECOLOR_TO_1 } from "../../../client/rs/config/player/PlayerDesignColors";
 import { getXpForLevel, SkillId } from "../../../client/rs/skill/skills";
 import { RUN_ENERGY_MAX } from "../../src/game/actor";
 import type { NpcState } from "../../src/game/npc";
@@ -288,6 +289,12 @@ class SinclairMansionGamemode extends SinclairBase {
         return this.keyById.get(player.id) ?? playerKey(player);
     }
 
+    /** A person or bot in the world by player id (a right-click target). */
+    private playerById(id: number): PlayerState | undefined {
+        const key = this.keyById.get(id);
+        return key ? this.actor(key) : undefined;
+    }
+
     /** The player standing in for a participant, person or bot. */
     private actor(key: string): PlayerState | undefined {
         return this.humans.get(key) ?? this.bots.get(key);
@@ -320,6 +327,8 @@ class SinclairMansionGamemode extends SinclairBase {
         if (!key || this.humans.get(key)?.id !== playerId) return; // already replaced by a newer login
         const player = this.humans.get(key)!;
         if (this.whyNotBrowse(player)) this.tokensAway.set(key, this.tokensOf(player)); // mid-game: kept for a reconnect
+        // The session's player object is gone: don't keep it (or its potion's timer) alive.
+        this.potionPrayerUntil.delete(player);
         // Mid-game they keep their seat for the reconnect grace; between games they're out.
         this.rooms?.disconnect(key);
         this.humans.delete(key);
@@ -399,9 +408,28 @@ class SinclairMansionGamemode extends SinclairBase {
         const colors = ints(r?.colors, 5, 0, 255);
         if (!r || (r.gender !== 0 && r.gender !== 1) || !kits || !colors) return;
         if (!player.appearance || !this.services) return;
+        // Everyone else's client draws this look, so only what the character designer offers is
+        // taken: each body part one of that gender's selectable kits (or none), each colour one
+        // of its palette's. Anything else (an id from another part or gender, a colour off the
+        // end of the palette) could leave other players drawing a broken model.
+        const offered = this.identityKits(r.gender);
+        if (offered && kits.some((id, part) => id !== -1 && !offered[part]?.includes(id))) return;
+        if (colors.some((c, i) => c >= (PLAYER_BODY_RECOLOR_TO_1[i]?.length ?? 0))) return;
         Object.assign(player.appearance, { gender: r.gender, kits, colors });
         this.refreshGear(player);
         this.services.appearance.savePlayerSnapshot(player);
+    }
+
+    /** The selectable identity kits per body part, per gender (from the cache, read once). */
+    private readonly kitsByGender = new Map<number, number[][]>();
+    private identityKits(gender: number): number[][] | undefined {
+        let kits = this.kitsByGender.get(gender);
+        if (!kits) {
+            kits = this.hudServices?.getIdentityKits(gender);
+            if (!kits?.some((part) => part.length)) return undefined; // cache not loaded: don't refuse anyone
+            this.kitsByGender.set(gender, kits);
+        }
+        return kits;
     }
 
     /** PvP is on everywhere in the mansion, but only while the household is spread out. */
@@ -509,22 +537,21 @@ class SinclairMansionGamemode extends SinclairBase {
             this.pushHuds();
         });
         // Render distance: living players only see actors within 7 tiles (Chebyshev distance).
+        // Runs for every viewer and actor pair each tick, so each lookup is done once.
         setActorVisibilityFilter((viewer, target) => {
-            // People who haven't joined the lobby aren't in the mansion yet.
-            if (target.kind === "player") {
-                const key = this.keyById.get(target.id);
-                const viewerGame = this.getGameForPlayer(viewer);
-                if (key && this.humans.has(key) && viewerGame && !viewerGame.participants.has(key)) return false;
-                // Ghosts walk among the living unseen (other ghosts see them).
-                const viewerP = this.participant(viewer);
-                if (key && viewerGame && viewerGame.participants.get(key)?.alive === false && viewerP?.alive) return false;
-            }
             const viewerGame = this.getGameForPlayer(viewer);
-            if (!viewerGame || viewerGame.phase !== "investigation") return true;
-            const me = this.participant(viewer);
-            if (!me || !me.alive) return true; // ghosts see everyone
+            const me = viewerGame?.participants.get(this.keyOf(viewer));
             const key = target.kind === "player" ? this.keyById.get(target.id) : undefined;
-            if (!key || !viewerGame.participants.has(key)) return true; // the cow, etc.
+            const them = key ? viewerGame?.participants.get(key) : undefined;
+            if (key && viewerGame) {
+                // People who haven't joined the lobby aren't in the mansion yet.
+                if (!them && this.humans.has(key)) return false;
+                // Ghosts walk among the living unseen (other ghosts see them).
+                if (them?.alive === false && me?.alive) return false;
+            }
+            if (!viewerGame || viewerGame.phase !== "investigation") return true;
+            if (!me || !me.alive) return true; // ghosts see everyone
+            if (!them) return true; // the cow, etc.
             // 7-tile Chebyshev render distance replaces the old zone-based system.
             return withinView(viewer, target);
         });
@@ -675,7 +702,8 @@ class SinclairMansionGamemode extends SinclairBase {
             registry.registerGroundItemInteraction(itemId, ({ player, target, services }) => {
                 const p = this.participant(player);
                 if (p && game.holdsTool(p, itemId)) return services.messaging.sendGameMessage(player, `You already have a ${this.io.itemName(itemId).toLowerCase()}. You can only carry one of each.`);
-                if (!p || !game.pickUp(p, itemId, target.tile)) return services.messaging.sendGameMessage(player, "You can't take that now.");
+                if (!p) return services.messaging.sendGameMessage(player, "You can't take that now.");
+                if (!game.pickUp(p, itemId, target.tile)) return; // it says why
                 services.groundItems.remove(target.stackId, 1);
                 this.ground.delete(groundKey(itemId, target.tile));
             }, "take");
@@ -860,7 +888,7 @@ class SinclairMansionGamemode extends SinclairBase {
             const p = this.participant(player);
             const id = (payload as { target?: unknown } | undefined)?.target;
             if (!p || typeof id !== "number") return;
-            const target = [...this.humans.values(), ...this.bots.values()].find((q) => q.id === id);
+            const target = this.playerById(id);
             const w = game.murderWeaponHeldBy(p) ?? game.weaponHeldBy(p);
             if (!target || !w) return void this.services?.messaging.sendGameMessage(player, "You have nothing to plant.");
             const why = game.plant(p, this.keyOf(target), w.itemId);
@@ -874,7 +902,7 @@ class SinclairMansionGamemode extends SinclairBase {
             const p = this.participant(player);
             const id = (payload as { target?: unknown } | undefined)?.target;
             if (!p || typeof id !== "number") return;
-            const target = [...this.humans.values(), ...this.bots.values()].find((q) => q.id === id);
+            const target = this.playerById(id);
             if (!target) return;
             const why = game.pickpocket(p, this.keyOf(target));
             this.services?.messaging.sendGameMessage(player, why ?? `You reach quietly into ${target.name}'s pack...`);
@@ -884,7 +912,7 @@ class SinclairMansionGamemode extends SinclairBase {
             const p = this.participant(player);
             const id = (payload as { target?: unknown } | undefined)?.target;
             if (!p || typeof id !== "number") return;
-            const target = [...this.humans.values(), ...this.bots.values()].find((q) => q.id === id);
+            const target = this.playerById(id);
             if (target) game.stopAndSearch(p, this.keyOf(target));
         });
         registry.registerCommand("who", withP(() => {
@@ -1012,16 +1040,6 @@ class SinclairMansionGamemode extends SinclairBase {
         for (const s of DOOR_SWINGS) doorManager.setSwingOverride(s.tile.x, s.tile.y, s.tile.level, s.swing);
     }
 
-    /** Doors start open but anyone can close them; bots open closed ones they run into. */
-    private openDoors(): void {
-        const services = this.services;
-        const doorManager = services?.location.doorManager;
-        if (!services || !doorManager) return;
-        this.doorsOpened = true;
-        const opened = DOORS.filter((d) => this.openDoor(d)).length;
-        services.system.logger.info(`[sinclair] opened ${opened}/${DOORS.length} mansion doors`);
-    }
-
     private isDoorOpen(d: (typeof DOORS)[number]): boolean {
         return !!this.services?.location.doorManager?.isDoorOpenAt(d.tile.x, d.tile.y, d.tile.level);
     }
@@ -1050,7 +1068,6 @@ class SinclairMansionGamemode extends SinclairBase {
         return true;
     }
 
-    /** The study's blood stain is the quest's crime scene; ours moves each game, so remove the original. */
     /** Each wall escape is a crumbling stretch of the garden wall, loose bricks lying below it. */
     private markWallEscapes(): void {
         const loc = this.services?.location;
@@ -1075,6 +1092,7 @@ class SinclairMansionGamemode extends SinclairBase {
         if (!butler) this.services?.system.logger.warn("[sinclair] couldn't spawn the Demon butler");
     }
 
+    /** The study's blood stain is the quest's crime scene; ours moves each game, so remove the original. */
     private removeOriginalBlood(): void {
         if (this.bloodRemoved || !this.services) return;
         this.bloodRemoved = true;
@@ -1115,8 +1133,12 @@ class SinclairMansionGamemode extends SinclairBase {
             Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) <= r;
         const here = { x: bot.tileX, y: bot.tileY };
         for (const d of DOORS) if (d.tile.level === bot.level && near(here, d.tile, 1)) this.openDoor(d);
+        // Each pathTo is a full pathfinder search, so remember the first tile that had a route
+        // (the fallback) instead of searching every tile again at the end.
+        let reachable: Tile | undefined;
         for (const t of tiles) {
             if (!bot.pathTo(t.x, t.y)) continue;
+            reachable ??= t;
             const q = bot.getPathQueue();
             const end = q[q.length - 1];
             if (!end || near(end, t, 1)) return true;
@@ -1125,7 +1147,7 @@ class SinclairMansionGamemode extends SinclairBase {
             (a, b) => Math.hypot(a.tile.x - here.x, a.tile.y - here.y) - Math.hypot(b.tile.x - here.x, b.tile.y - here.y),
         );
         for (const d of closed.slice(0, 3)) if (bot.pathTo(d.tile.x, d.tile.y)) return true;
-        return tiles.some((t) => bot.pathTo(t.x, t.y));
+        return !!reachable && bot.pathTo(reachable.x, reachable.y);
     }
 
     /** A household member joins as an AI player, dressed as themselves. */
@@ -1860,18 +1882,23 @@ class SinclairMansionGamemode extends SinclairBase {
 
     /** Called after WSServer is constructed; registers the HUD snapshot encoder. */
     registerOverlayEncoder(registerSnapshotEncoder: GamemodeServerServices["registerSnapshotEncoder"]): void {
-        registerSnapshotEncoder(HUD_SNAPSHOT, (_playerId, payload) => ({
-            message: encodeHudPacket(payload as MurderHud),
-            context: HUD_SNAPSHOT,
-        }));
+        registerSnapshotEncoder(HUD_SNAPSHOT, (_playerId, payload) => {
+            try {
+                return { message: encodeHudPacket(payload as MurderHud), context: HUD_SNAPSHOT };
+            } catch (err) {
+                // One oversized HUD is skipped (the next one replaces it); it mustn't stop the broadcast.
+                this.hudServices?.logger.warn(`[sinclair] HUD not sent: ${(err as Error).message}`);
+                return undefined;
+            }
+        });
     }
 
-    /** The /status reply's game info, for server browsers that saved this address. */
     /** Sent to each client at login: the renamed chore token (butler.ts). */
     getContentDataPacket(): Uint8Array {
         return contentPacket();
     }
 
+    /** The /status reply's game info, for server browsers that saved this address. */
     getStatusInfo(): Record<string, unknown> {
         return { game: "sinclair-mansion", lobby: this.rooms?.list()[0] ?? null };
     }

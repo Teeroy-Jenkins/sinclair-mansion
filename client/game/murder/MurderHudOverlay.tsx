@@ -83,10 +83,13 @@ export function MurderHudOverlay({ playerName = "", onSwitchServer, client }: { 
     useEffect(() => {
         if (onSwitchServer) setSwitchServer(onSwitchServer);
     }, [onSwitchServer]);
+    // Re-render for the countdown only while there is one (the lobby and menus have no timer).
+    const counting = state?.hud.secondsLeft !== undefined;
     useEffect(() => {
+        if (!counting) return;
         const id = window.setInterval(() => setNow((n) => n + 1), 250);
         return () => window.clearInterval(id);
-    }, []);
+    }, [counting]);
 
     // On your own copy with a room open: share it over PeerJS so friends anywhere can join with
     // the room code (this tab relays them to the game server), through lobby and games alike.

@@ -125,7 +125,7 @@ The main menu (the character designer) has **Store** and **Bank** buttons beside
 The game is distributed as a zip. There is no central server to host: every player's copy *is* a game server, and friends play together by connecting to the host's copy directly (peer-to-peer).
 
 ```powershell
-# Build the web client and package everything into dist/SinclairMansion.zip (~215 MB)
+# Build the web client and package everything into dist/SinclairMansion.zip (~205 MB)
 yarn build:zip
 
 # Reuse an existing client build
@@ -202,7 +202,7 @@ Each copy also runs a small matchmaking registry (`server/src/matchmaking/`). It
 
 | Endpoint | What it does |
 |---|---|
-| `POST /matchmaking/register` | A server's heartbeat: `{ id, address, name, lobbies: [...] }`. Its room list replaces the previous one; servers expire 30 s after their last heartbeat. |
+| `POST /matchmaking/register` | A server's heartbeat: `{ id, address, name, lobbies: [...] }`. Its room list replaces the previous one; servers expire 30 s after their last heartbeat. Only servers can register: a request from a web page (one with an `Origin` header) is refused, so a site you visit can't list fake rooms. |
 | `GET /matchmaking/servers` | One row per room on every live server. |
 | `GET /matchmaking/registry` | The live servers themselves (other registries sync from this). |
 | `GET /matchmaking/resolve?code=ABC123` | `{ address }` of the room with that internal room code, else 404. |

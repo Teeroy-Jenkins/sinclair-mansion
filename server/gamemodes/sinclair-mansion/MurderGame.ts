@@ -1062,18 +1062,20 @@ export class MurderGame {
     private takeTools(p: Participant, c: Container): boolean {
         const here = this.spawnPoints.filter((s) => s.present && s.in === c.id);
         if (!here.length) return false;
-        const taken: SpawnPoint[] = [];
+        const wanted: SpawnPoint[] = [];
         for (const s of here) {
-            if (this.wantsTool(p, s.itemId) && !taken.some((q) => q.itemId === s.itemId)) taken.push(s);
+            if (this.wantsTool(p, s.itemId) && !wanted.some((q) => q.itemId === s.itemId)) wanted.push(s);
         }
+        // Only what fits in the pack is taken; the rest stays in the furniture.
+        const taken = wanted.filter((s) => this.io.giveItem(p, s.itemId));
         for (const s of taken) {
             s.present = false;
             s.respawnAt = this.tick + secToTicks(C.items.respawnSec);
-            this.io.giveItem(p, s.itemId);
         }
+        if (taken.length < wanted.length) this.io.message(p, "You don't have enough inventory space to carry everything you need.");
         const names = (list: SpawnPoint[]) => list.map((s) => this.io.itemName(s.itemId)).join(", ");
         if (taken.length) this.io.message(p, `You search ${theRoom(c.name)} and find: ${names(taken)}.`);
-        const left = here.filter((s) => !taken.includes(s));
+        const left = here.filter((s) => !wanted.includes(s));
         const spare = left.filter((s) => this.holdsTool(p, s.itemId));
         const unwanted = left.filter((s) => !spare.includes(s));
         if (spare.length) this.io.message(p, `There's ${names(spare)} in ${theRoom(c.name)}, but you already have one.`);
@@ -1086,14 +1088,20 @@ export class MurderGame {
      * if they can't. A spawn point at that tile starts counting down to its respawn.
      */
     pickUp(p: Participant, itemId: number, tile: Tile): boolean {
-        if (!p.alive || this.phase === "lobby" || this.phase === "gameover" || this.fading(p)) return false;
-        if (this.holdsTool(p, itemId)) return false;
+        if (!p.alive || this.phase === "lobby" || this.phase === "gameover" || this.fading(p) || this.holdsTool(p, itemId)) {
+            this.io.message(p, "You can't take that now.");
+            return false;
+        }
+        // A full pack leaves it where it lies (it used to vanish: taken off the floor, never given).
+        if (!this.io.giveItem(p, itemId)) {
+            this.io.message(p, "You don't have enough inventory space to hold that item.");
+            return false;
+        }
         const s = this.spawnPoints.find((q) => q.present && !q.in && q.itemId === itemId && q.tile.x === tile.x && q.tile.y === tile.y && q.tile.level === tile.level);
         if (s) {
             s.present = false;
             s.respawnAt = this.tick + secToTicks(C.items.respawnSec);
         }
-        this.io.giveItem(p, itemId);
         this.checkFetch(p);
         return true;
     }
@@ -1117,8 +1125,10 @@ export class MurderGame {
     botPickUp(p: Participant, itemId: number, tile: Tile): boolean {
         const s = this.spawnPoints.find((q) => q.present && !q.in && q.itemId === itemId && q.tile.x === tile.x && q.tile.y === tile.y && q.tile.level === tile.level);
         if (!s || !this.botMayPickUp(p)) return false;
+        // Off the floor only once it's in the bot's pack (a full pack leaves it lying there).
+        if (!this.pickUp(p, itemId, tile)) return false;
         this.io.removeGround(itemId, tile);
-        return this.pickUp(p, itemId, tile);
+        return true;
     }
     /**
      * Two chores can share a tool: one bucket ticks off "Find a bucket" for both, then filling it
