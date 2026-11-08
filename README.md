@@ -1,6 +1,6 @@
 # Murder at Sinclair Mansion
 
-**A free, open-source multiplayer murder mystery set in Old School RuneScape's Sinclair Mansion. It runs in your browser.**
+**There's been an awful tragedy...**
 
 One of the Sinclair household killed Lord Sinclair. Everyone else does their chores, gathers clues and argues it out at the dinner table. The Murderer tries to frame someone, picks people off when they're alone, or slips out through the garden wall. Think *Among Us* or *Town of Salem*, played in the real Sinclair Mansion north of Camelot, with OSRS models, menus, combat and chat.
 
@@ -20,7 +20,7 @@ Friends can join from anywhere with the room code. Internet games connect peer-t
 
 ## The game
 
-- **Roles.** The household (4–12 players, people and bots together) includes one secret **Murderer** and a **Detective** nobody is told about.
+- **Roles.** The household (4–10 players, people and bots together) includes one secret **Murderer** and a **Detective** nobody is told about.
 - **Investigate.** Do chores around the mansion and grounds, study the body for the wound, dust weapons for fingerprints, and Stop and Search suspects.
 - **The dinner table.** When the grandfather clock strikes, everyone sits down to talk it over and vote. A majority arrests a suspect.
 - **The Murderer** hides or plants the murder weapon, pickpockets it back, ambushes people with a **dragon claws** special attack, or lockpicks and chisels a way out of the grounds.
