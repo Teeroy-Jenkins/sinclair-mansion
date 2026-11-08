@@ -34,7 +34,7 @@ One of the Sinclair household killed Lord Sinclair. Everyone else does their cho
 This project stands on the work of others:
 
 - **[XRSPS](https://github.com/xrsps/xrsps-typescript)** by dennisdev and the XRSPS contributors: the TypeScript OSRS-style engine (WebGL client, WebSocket server, cache pipeline) the game is built on. It's licensed under the BSD 2-Clause License (see [`LICENSE`](LICENSE)).
-- **[2009scape](https://gitlab.com/2009scape/2009scape)**: an open-source RuneScape emulator (AGPL-3.0). We used its code as a reference for bot AI, cutscenes, animations, item behaviour and quest content, and adapted parts of it.
+- **[2009scape](https://gitlab.com/2009scape/2009scape)**: an open-source RuneScape emulator (AGPL-3.0). Used its code as a reference, cutscenes, animations, item behaviour and quest content.
 - **[Old School RuneScape](https://oldschool.runescape.com/)** by **Jagex**: the world, the Murder Mystery quest's Sinclair Mansion, and every model, sound and interface the game uses come from OSRS.
 - **[PeerJS](https://github.com/peers/peerjs)** (MIT) for peer-to-peer internet play, and the [Impostor](https://github.com/Impostor/Impostor) Among Us server, which inspired the room and lobby design.
 - **AI tools**: Anthropic's Claude (Claude Code) wrote most of the code. See the note above.
