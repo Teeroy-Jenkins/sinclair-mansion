@@ -9,6 +9,7 @@ import { WSServer } from "./network/wsServer";
 import { serverPath } from "./paths";
 import { PathService } from "./pathfinding/PathService";
 import { logger } from "./utils/logger";
+import { getUpdater } from "./update/Updater";
 import { setViewportEnumService } from "./widgets/viewport";
 import { ViewportEnumService } from "./widgets/viewport/ViewportEnumService";
 import { initCacheEnv } from "./world/CacheEnv";
@@ -101,6 +102,9 @@ async function main() {
     ticker.start();
     logger.info("Boot: game ticker started");
 
+    // Check GitHub for a newer release (the main menu offers it).
+    getUpdater().start();
+
     // Graceful shutdown
     let shuttingDown = false;
     const shutdown = (signal: string) => async () => {
@@ -114,7 +118,8 @@ async function main() {
             logger.warn("Final player save failed", err);
         }
         gamemode.dispose?.();
-        // 64 when the player chose Exit Game (wsServer's /exit), so the launcher quits quietly.
+        // 64 when the player chose Exit Game (wsServer's /exit), so the launcher quits quietly;
+        // 65 to install a downloaded update (wsServer's /update/restart, see Launcher.cs).
         process.exit(typeof process.exitCode === "number" ? process.exitCode : 0);
     };
     process.on("SIGINT", shutdown("SIGINT"));

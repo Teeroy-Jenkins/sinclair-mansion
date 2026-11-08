@@ -4,7 +4,7 @@ import type { LoginRendererHost } from "../host";
 import { getCanvas, getContext, isCaretVisible } from "../canvas";
 import { withRenderTransform, getViewportTransformStateHash, getTitleAssetStateHash } from "../layout/config";
 import { updateLayout } from "../layout/updateLayout";
-import { getLogicalFirePositions, getServerListButtonPosition } from "../layout/geometry";
+import { getLogicalFirePositions } from "../layout/geometry";
 import { drawTitleBackgroundToCtx } from "./background";
 import { drawLoadingBarToCtx } from "./loadingBars";
 import { drawLoginScreenToCtx } from "./loginScreensRouter";
@@ -12,7 +12,7 @@ import { drawServerListOverlay } from "./serverListOverlay";
 import { drawWorldSelectGridOnly } from "../world/worldSelectGridDraw";
 import { drawWorldSelectHoverOnly } from "../world/worldSelectHover";
 import { drawTitleMuteButton } from "../controls";
-import { drawLogoToCtx, drawSprite, drawCenteredText } from "./drawUtils";
+import { drawLogoToCtx } from "./drawUtils";
 
 export function computeTitleStateHash(
     host: LoginRendererHost,
@@ -157,29 +157,8 @@ export function drawTitle(host: LoginRendererHost, state: LoginState, gameState:
                         }
                     }
 
-                    // Server list button (bottom left) — same baseline as mute button
-                    if (
-                        gameState >= GameState.LOGIN_SCREEN &&
-                        host.worldSelectButtonSprite &&
-                        host.fontPlain11
-                    ) {
-                        const buttonPos = getServerListButtonPosition(host);
-                        drawSprite(host, 
-                            cacheCtx,
-                            host.worldSelectButtonSprite,
-                            buttonPos.x,
-                            buttonPos.y,
-                        );
-                        drawCenteredText(host, 
-                            cacheCtx,
-                            host.fontPlain11,
-                            state.serverName,
-                            buttonPos.x + (host.worldSelectButtonSprite.subWidth >> 1),
-                            buttonPos.y + 22,
-                            0xffffff,
-                            true,
-                        );
-                    }
+                    // The server list button (bottom left) is gone: the version / update button
+                    // (game/murder/UpdateBadge.tsx, a React overlay) sits there instead.
 
                     // Server list overlay
                     if (state.serverListOpen) {

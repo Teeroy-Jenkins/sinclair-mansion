@@ -6,7 +6,6 @@ import type { LoginRendererHost } from "../host";
 import { toLayoutPoint } from "../layout/config";
 import { toContentPoint } from "../layout/geometry";
 import { isTitleMuteHit } from "../controls";
-import { getServerListButtonPosition } from "../layout/geometry";
 import { getMobileWorldIndexAtPosition } from "../world/worldSelectMobile";
 import {
     handleWelcomeClick,
@@ -192,20 +191,7 @@ export function handleMouseClick(
             return handleServerListClick(host, state, x, y);
         }
 
-        // Server list button (bottom left, replaces world select button)
-        if (gameState >= GameState.LOGIN_SCREEN && host.worldSelectButtonSprite) {
-            const buttonPos = getServerListButtonPosition(host);
-            const buttonW = host.worldSelectButtonSprite.subWidth || 100;
-            const buttonH = host.worldSelectButtonSprite.subHeight || 35;
-            if (
-                x >= buttonPos.x &&
-                x <= buttonPos.x + buttonW &&
-                y >= buttonPos.y &&
-                y <= buttonPos.y + buttonH
-            ) {
-                return LoginActions.OPEN_SERVER_LIST;
-            }
-        }
+        // (The server list button that sat bottom left is now the version / update button, UpdateBadge.)
 
         // World select overlay handling (when open)
         if (state.worldSelectOpen) {

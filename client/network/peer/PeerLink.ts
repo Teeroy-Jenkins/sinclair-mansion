@@ -4,16 +4,21 @@
 //
 //   friend's client --PeerSocket--> (WebRTC) --> PeerHost (host's tab) --WebSocket--> host's server
 //
-// PeerJS's free cloud (0.peerjs.com) only introduces the two browsers; STUN finds a direct path
-// through most home routers, and PeerJS's free TURN servers relay the rest. The game server never
-// knows: each friend is one more WebSocket client (from 127.0.0.1).
+// PeerJS's free cloud (0.peerjs.com) only introduces the two browsers; the data always goes through
+// PeerJS's free TURN relays, so neither browser learns the other's IP address (PeerConfig.ts).
+// The game server never knows: each friend is one more WebSocket client (from 127.0.0.1).
 import Peer, { type DataConnection, type PeerError } from "peerjs";
 
+import { MAX_PEER_MESSAGE_BYTES, PEER_OPTIONS } from "./PeerConfig";
 import { FrameReader, toFrames } from "./PeerFrames";
 
 const PEER_PREFIX = "sinclair-mansion-";
 /** How long a friend waits for the host's browser to answer. */
 const CONNECT_TIMEOUT_MS = 20_000;
+/** Friends one room's host relays at once (rooms seat 12; the rest is headroom for probes). */
+const MAX_LINKS = 24;
+/** What a friend accepts from the host's game server in one message (the host only relays it). */
+const MAX_SERVER_MESSAGE_BYTES = 32 * 1024 * 1024;
 
 /** The PeerJS id a room is reachable at. */
 export function peerIdFor(roomCode: string): string {
@@ -21,14 +26,16 @@ export function peerIdFor(roomCode: string): string {
 }
 
 /** Calls `onMessage` with each whole message, in order (Blob chunks are read one at a time). */
-function readFrames(conn: DataConnection, onMessage: (data: ArrayBuffer | string) => void): void {
-    const reader = new FrameReader();
+function readFrames(conn: DataConnection, maxBytes: number, onMessage: (data: ArrayBuffer | string) => void): void {
+    const reader = new FrameReader(maxBytes);
     let queue = Promise.resolve();
     conn.on("data", (data: unknown) => {
         queue = queue.then(async () => {
-            const bytes = data instanceof Blob ? await data.arrayBuffer() : (data as ArrayBuffer | ArrayBufferView);
+            if (!(data instanceof Blob || data instanceof ArrayBuffer || ArrayBuffer.isView(data))) return; // not a frame
+            const bytes = data instanceof Blob ? await data.arrayBuffer() : data;
             const message = reader.push(bytes);
-            if (message !== undefined) onMessage(message);
+            if (message === null) conn.close(); // over the size limit: a broken or hostile peer
+            else if (message !== undefined) onMessage(message);
         });
     });
 }
@@ -48,7 +55,7 @@ export class PeerSocket extends EventTarget {
     static readonly CLOSED = 3;
     readyState = PeerSocket.CONNECTING;
     binaryType: BinaryType = "arraybuffer";
-    private readonly peer = new Peer();
+    private readonly peer = new Peer(PEER_OPTIONS);
     private conn?: DataConnection;
     private timer?: ReturnType<typeof setTimeout>;
 
@@ -64,7 +71,7 @@ export class PeerSocket extends EventTarget {
                 this.readyState = PeerSocket.OPEN;
                 this.dispatchEvent(new Event("open"));
             });
-            readFrames(conn, (data) => {
+            readFrames(conn, MAX_SERVER_MESSAGE_BYTES, (data) => {
                 if (this.readyState === PeerSocket.OPEN) this.dispatchEvent(new MessageEvent("message", { data }));
             });
             conn.on("close", () => this.finish(1006, "host gone", false));
@@ -134,7 +141,7 @@ export class PeerHost {
         private readonly onStatus: (status: PeerHostStatus) => void,
     ) {
         onStatus("connecting");
-        this.peer = new Peer(peerIdFor(roomCode));
+        this.peer = new Peer(peerIdFor(roomCode), PEER_OPTIONS);
         this.peer.on("open", () => onStatus("ready"));
         this.peer.on("connection", (conn) => this.bridge(conn));
         // Lost the PeerJS cloud (not the friends already connected): register again shortly.
@@ -155,6 +162,10 @@ export class PeerHost {
     }
 
     private bridge(conn: DataConnection): void {
+        if (this.links.size >= MAX_LINKS) {
+            conn.on("open", () => conn.close());
+            return;
+        }
         const ws = new WebSocket(this.serverUrl);
         ws.binaryType = "arraybuffer";
         const link = { conn, ws };
@@ -169,7 +180,7 @@ export class PeerHost {
                 conn.close();
             } catch {}
         };
-        readFrames(conn, (data) => (ws.readyState === WebSocket.OPEN ? ws.send(data) : waiting.push(data)));
+        readFrames(conn, MAX_PEER_MESSAGE_BYTES, (data) => (ws.readyState === WebSocket.OPEN ? ws.send(data) : waiting.push(data)));
         ws.addEventListener("open", () => waiting.splice(0).forEach((data) => ws.send(data)));
         ws.addEventListener("message", (e) => conn.open && sendFrames(conn, e.data as ArrayBuffer | string));
         ws.addEventListener("close", end);

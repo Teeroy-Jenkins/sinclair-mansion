@@ -5550,7 +5550,8 @@ export class OsrsClient {
             closeConnection();
             this.widgetManager?.clear();
             this.loginState.serverAddress = address;
-            this.loginState.serverName = address;
+            // Never the raw address: it would show on screen (streams, screenshots).
+            this.loginState.serverName = "Sinclair Mansion";
             this.loginState.serverSecure = false;
             this.updateGameState(GameState.LOGIN_SCREEN); // points the connection at `address`
             // Update the connection URL so sendLogin connects to the NEW server, not the old one.

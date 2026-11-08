@@ -13,7 +13,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -26,9 +29,15 @@ static class Launcher
     [DllImport("user32.dll")]
     static extern bool SetProcessDPIAware();
 
+    /// <summary>Set after an update was installed (or failed to): start this exe again once the mutex is released.</summary>
+    public static string RestartArgs;
+    /// <summary>Started by a finished update: the game's tab reloads by itself, so don't open another.</summary>
+    public static bool JustUpdated;
+
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
+        JustUpdated = Array.IndexOf(args, "--updated") >= 0;
         try { SetProcessDPIAware(); }
         catch { }
         Application.EnableVisualStyles();
@@ -43,6 +52,12 @@ static class Launcher
         bool first;
         using (var running = new Mutex(true, "SinclairMansion-" + port, out first))
         {
+            // After an update the old launcher may still be closing: wait for it.
+            if (!first && JustUpdated)
+            {
+                try { first = running.WaitOne(15000); }
+                catch (AbandonedMutexException) { first = true; }
+            }
             if (!first)
             {
                 OpenUrl(url);
@@ -54,7 +69,20 @@ static class Launcher
                 return;
             }
             Application.Run(new GameWindow(game, node, port, url));
+            try { running.ReleaseMutex(); }
+            catch { }
         }
+        if (RestartArgs != null)
+        {
+            try { Process.Start(new ProcessStartInfo(Application.ExecutablePath, RestartArgs) { UseShellExecute = false, WorkingDirectory = InstallDir }); }
+            catch (Exception e) { MessageBox.Show("Couldn't start the game again: " + e.Message + "\n\nStart it yourself.", Title, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+        }
+    }
+
+    /// <summary>The folder holding this exe, game\ and (while updating) update\.</summary>
+    public static string InstallDir
+    {
+        get { return AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar); }
     }
 
     public static void OpenUrl(string target)
@@ -186,6 +214,8 @@ class GameWindow : Form
         base.OnShown(e);
         animation.Start();
         Taskbar.SetProgress(Handle, 0);
+        // What an earlier update left behind (the old version's folder), out of the way.
+        new Thread(delegate () { GameUpdate.CleanUp(Launcher.InstallDir); }) { IsBackground = true, Priority = ThreadPriority.BelowNormal }.Start();
         try { StartServer(); }
         catch (Exception error)
         {
@@ -224,6 +254,9 @@ class GameWindow : Form
         };
         start.EnvironmentVariables["PORT"] = port.ToString();
         start.EnvironmentVariables["SINCLAIR_NO_BROWSER"] = "1"; // opened from here, outside the job
+        // Lets the game's updater download into <install>\update (GameUpdate installs it).
+        start.EnvironmentVariables["SINCLAIR_LAUNCHER"] = "1";
+        start.EnvironmentVariables["SINCLAIR_INSTALL_DIR"] = Launcher.InstallDir;
         server = new Process { StartInfo = start, EnableRaisingEvents = true };
         server.OutputDataReceived += (s, e) => Log(e.Data);
         server.ErrorDataReceived += (s, e) => Log(e.Data);
@@ -334,6 +367,11 @@ class GameWindow : Form
         detail.Text = "Playing at " + url + "\nKeep this window open while you play: closing it stops the game.";
         openButton.Visible = true;
         quitButton.Text = "Quit";
+        if (Launcher.JustUpdated)
+        {
+            status.Text = "Updated! Your game is running";
+            return; // the game's tab reloads itself
+        }
         Launcher.OpenUrl(url);
     }
 
@@ -348,6 +386,12 @@ class GameWindow : Form
             Close();
             return;
         }
+        // 65: the player chose Update in the main menu and the new version is downloaded.
+        if (server.ExitCode == GameUpdate.ExitCode)
+        {
+            InstallUpdate();
+            return;
+        }
         Taskbar.SetError(Handle);
         string lines;
         lock (tail) lines = string.Join("\n", tail.ToArray());
@@ -358,8 +402,58 @@ class GameWindow : Form
         Close();
     }
 
+    void InstallUpdate()
+    {
+        Job.Close(job);
+        job = IntPtr.Zero;
+        lock (tail)
+        {
+            if (log != null) log.Dispose();
+            log = null;
+        }
+        status.ForeColor = Text_;
+        status.Text = "Installing the update...";
+        detail.Text = "Don't close this window: the game starts again by itself.";
+        openButton.Visible = false;
+        quitButton.Enabled = false;
+        ready = false;
+        target = 2;
+        cap = 95;
+        bar.Value = 0;
+        animation.Start();
+        new Thread(delegate ()
+        {
+            string error = null;
+            try
+            {
+                GameUpdate.Install(Launcher.InstallDir, game, delegate (int percent, string text)
+                {
+                    Post(delegate { target = Math.Max(target, percent); if (text != null) status.Text = text; });
+                });
+            }
+            catch (Exception e) { error = e.Message; }
+            Post(delegate { UpdateFinished(error); });
+        }) { IsBackground = true }.Start();
+    }
+
+    void UpdateFinished(string error)
+    {
+        if (error != null)
+            MessageBox.Show(this, "The update couldn't be installed:\n\n" + error + "\n\nYour game wasn't changed and will start again now. You can also download the new version from GitHub.",
+                Launcher.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        Launcher.RestartArgs = error == null ? "--updated" : "";
+        quitButton.Enabled = true;
+        Close();
+    }
+
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        // Half-swapped folders would break the game: the install finishes first.
+        if (quitButton != null && !quitButton.Enabled && e.CloseReason == CloseReason.UserClosing)
+        {
+            e.Cancel = true;
+            return;
+        }
         if (ready && !stopping && e.CloseReason == CloseReason.UserClosing)
         {
             var answer = MessageBox.Show(this, "Quit the game?\n\nThis stops your game server: anyone playing in your room will be disconnected.",
@@ -381,6 +475,153 @@ class GameWindow : Form
             log = null;
         }
         base.OnFormClosing(e);
+    }
+}
+
+/// <summary>
+/// Installs an update the game server downloaded (server/src/update/Updater.ts) into
+/// <install>\update\: SinclairMansion.zip plus ready.json naming its SHA-256. The server has
+/// exited, so nothing holds the files: unpack the zip beside the game, carry the player's saves
+/// over, then swap the game\ folder and this exe for the new ones (a running exe can be renamed,
+/// not overwritten). The old ones are deleted on the next start.
+/// </summary>
+static class GameUpdate
+{
+    public const int ExitCode = 65;
+    const string ZipRoot = "SinclairMansion";
+    const string ExeName = Launcher.Title + ".exe";
+
+    public delegate void Progress(int percent, string text);
+
+    public static void Install(string install, string game, Progress progress)
+    {
+        string dir = Path.Combine(install, "update");
+        string marker = Path.Combine(dir, "ready.json");
+        string zipPath = Path.Combine(dir, "SinclairMansion.zip");
+        if (!File.Exists(marker) || !File.Exists(zipPath)) throw new Exception("The downloaded update is missing.");
+        Match hash = Regex.Match(File.ReadAllText(marker), "\"sha256\"\\s*:\\s*\"([0-9a-fA-F]{64})\"");
+        if (!hash.Success) throw new Exception("The update's checksum is missing.");
+
+        progress(5, "Checking the download...");
+        string actual;
+        using (var sha = SHA256.Create())
+        using (var file = File.OpenRead(zipPath))
+            actual = BitConverter.ToString(sha.ComputeHash(file)).Replace("-", "").ToLowerInvariant();
+        if (actual != hash.Groups[1].Value.ToLowerInvariant()) throw new Exception("The download is damaged (its checksum doesn't match).");
+
+        // Unpack into update\staged, refusing any entry that would land outside it.
+        string staged = Path.Combine(dir, "staged");
+        if (Directory.Exists(staged)) Directory.Delete(staged, true);
+        Directory.CreateDirectory(staged);
+        string stagedRoot = Path.GetFullPath(staged) + Path.DirectorySeparatorChar;
+        using (ZipArchive zip = ZipFile.OpenRead(zipPath))
+        {
+            int done = 0, total = Math.Max(1, zip.Entries.Count);
+            foreach (ZipArchiveEntry entry in zip.Entries)
+            {
+                string to = Path.GetFullPath(Path.Combine(staged, entry.FullName));
+                if (!to.StartsWith(stagedRoot, StringComparison.OrdinalIgnoreCase)) throw new Exception("The update contains a bad path: " + entry.FullName);
+                if (entry.FullName.EndsWith("/") || entry.FullName.EndsWith("\\")) Directory.CreateDirectory(to);
+                else
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(to));
+                    entry.ExtractToFile(to, true);
+                }
+                if (++done % 200 == 0) progress(10 + 70 * done / total, "Unpacking the update...");
+            }
+        }
+        string fresh = Path.Combine(staged, ZipRoot);
+        string freshGame = Path.Combine(fresh, "game");
+        string freshExe = Path.Combine(fresh, ExeName);
+        if (!File.Exists(Path.Combine(freshGame, Path.Combine("node", "node.exe"))) || !File.Exists(freshExe))
+            throw new Exception("The update isn't a complete copy of the game.");
+
+        // The player's server-side saves and the logs come along.
+        progress(82, "Keeping your saves...");
+        string saves = Path.Combine(game, Path.Combine("server", Path.Combine("data", "gamemodes")));
+        if (Directory.Exists(saves))
+            foreach (string mode in Directory.GetDirectories(saves))
+                foreach (string file in Directory.GetFiles(mode, "game.sqlite*"))
+                {
+                    string to = Path.Combine(Path.Combine(freshGame, Path.Combine("server", Path.Combine("data", "gamemodes"))), Path.GetFileName(mode));
+                    Directory.CreateDirectory(to);
+                    File.Copy(file, Path.Combine(to, Path.GetFileName(file)), true);
+                }
+        string logs = Path.Combine(game, "logs");
+        if (Directory.Exists(logs))
+        {
+            Directory.CreateDirectory(Path.Combine(freshGame, "logs"));
+            foreach (string file in Directory.GetFiles(logs)) File.Copy(file, Path.Combine(Path.Combine(freshGame, "logs"), Path.GetFileName(file)), true);
+        }
+
+        // Swap. The server may take a moment to let go of its files.
+        progress(90, "Installing...");
+        string stamp = DateTime.Now.Ticks.ToString();
+        string oldGame = Path.Combine(dir, "old-game-" + stamp);
+        Retry(delegate { Directory.Move(game, oldGame); }, "The game's files are still in use. Close anything using the game folder and try again.");
+        try { Directory.Move(freshGame, game); }
+        catch
+        {
+            Directory.Move(oldGame, game);
+            throw;
+        }
+        string exe = Application.ExecutablePath;
+        string oldExe = Path.Combine(dir, "old-launcher-" + stamp + ".exe");
+        try
+        {
+            File.Move(exe, oldExe);
+            File.Move(freshExe, exe);
+        }
+        catch
+        {
+            // The new game folder still works with this launcher; it's replaced next time.
+            if (!File.Exists(exe) && File.Exists(oldExe)) File.Move(oldExe, exe);
+        }
+        string readme = Path.Combine(fresh, "README.txt");
+        try { if (File.Exists(readme)) File.Copy(readme, Path.Combine(install, "README.txt"), true); }
+        catch { }
+
+        progress(97, "Tidying up...");
+        try { File.Delete(zipPath); File.Delete(marker); Directory.Delete(staged, true); }
+        catch { }
+    }
+
+    /// <summary>Deletes what an earlier update left in update\ (old versions, half-done unpacking).</summary>
+    public static void CleanUp(string install)
+    {
+        string dir = Path.Combine(install, "update");
+        if (!Directory.Exists(dir)) return;
+        try
+        {
+            foreach (string d in Directory.GetDirectories(dir))
+            {
+                string name = Path.GetFileName(d);
+                if (name.StartsWith("old-") || name == "staged") try { Directory.Delete(d, true); } catch { }
+            }
+            foreach (string f in Directory.GetFiles(dir, "old-*")) try { File.Delete(f); } catch { }
+        }
+        catch { }
+    }
+
+    static void Retry(MethodInvoker action, string failure)
+    {
+        for (int i = 0; ; i++)
+        {
+            try
+            {
+                action();
+                return;
+            }
+            catch (IOException)
+            {
+                if (i >= 20) throw new Exception(failure);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                if (i >= 20) throw new Exception(failure);
+            }
+            Thread.Sleep(500);
+        }
     }
 }
 

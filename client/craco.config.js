@@ -8,6 +8,9 @@ const redirectServedPath = require("react-dev-utils/redirectServedPathMiddleware
 const paths = require("react-scripts/config/paths");
 const express = require("express");
 
+// The version the main menu shows (from the root package.json, bumped with each release).
+process.env.REACT_APP_VERSION = process.env.REACT_APP_VERSION || require("../package.json").version;
+
 // This package IS the CRA app root (sibling of ../server and ../docs).
 const appRoot = __dirname;
 paths.appPath = appRoot;

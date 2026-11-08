@@ -109,6 +109,7 @@ import { TradeManager } from "../game/trade/TradeManager";
 import { PathService } from "../pathfinding/PathService";
 import { logger } from "../utils/logger";
 import { handleMatchmaking } from "../matchmaking/http";
+import { getUpdater, UPDATE_EXIT_CODE } from "../update/Updater";
 
 /** Exit code for "the player chose Exit Game" (the launcher quits quietly on it). */
 export const EXIT_GAME_CODE = 64;
@@ -599,6 +600,8 @@ export class WSServer {
         this.wss = new WebSocketServer({
             host: opts.host,
             port: opts.port,
+            // Game packets are small; the default (100 MB) would let one peer exhaust memory.
+            maxPayload: 1024 * 1024,
             perMessageDeflate: {
                 zlibDeflateOptions: { level: 6 },
                 zlibInflateOptions: { chunkSize: 10 * 1024 },
@@ -636,6 +639,40 @@ export class WSServer {
                             res.end(JSON.stringify({ ok: true }));
                             logger.info("[exit] The player chose Exit Game: shutting down");
                             process.exitCode = EXIT_GAME_CODE;
+                            setTimeout(() => process.emit("SIGTERM" as NodeJS.Signals), 250);
+                            return;
+                        }
+                        // The main menu's version button and updater. Loopback only: it's this
+                        // player's own copy. The POSTs need a custom header (so another website
+                        // can't send them without a CORS preflight, which is never allowed) and,
+                        // when the browser sends one, a localhost Origin.
+                        if (url === "/update/status" || url === "/update/download" || url === "/update/restart") {
+                            const addr = req.socket.remoteAddress ?? "";
+                            const loopback = addr === "127.0.0.1" || addr === "::1" || addr === "::ffff:127.0.0.1";
+                            const origin = req.headers.origin;
+                            const localOrigin = !origin || /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(origin);
+                            const isPost = url !== "/update/status";
+                            const allowed = loopback && localOrigin && (isPost ? req.method === "POST" && req.headers["x-sinclair-update"] === "1" : req.method === "GET");
+                            if (!allowed) {
+                                res.writeHead(403);
+                                res.end();
+                                return;
+                            }
+                            const updater = getUpdater();
+                            const reply = (body: unknown, code = 200) => {
+                                res.writeHead(code, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+                                res.end(JSON.stringify(body));
+                            };
+                            if (url === "/update/status") return reply(updater.status());
+                            if (url === "/update/download") {
+                                const r = updater.download();
+                                return reply(r, r.ok ? 200 : 409);
+                            }
+                            // /update/restart: hand over to the launcher, which installs and restarts.
+                            if (!updater.isReady()) return reply({ ok: false, error: "The update isn't downloaded yet." }, 409);
+                            reply({ ok: true });
+                            logger.info("[update] Restarting to install the update");
+                            process.exitCode = UPDATE_EXIT_CODE;
                             setTimeout(() => process.emit("SIGTERM" as NodeJS.Signals), 250);
                             return;
                         }

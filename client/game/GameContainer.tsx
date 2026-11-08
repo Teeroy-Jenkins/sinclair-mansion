@@ -16,6 +16,7 @@ import { LoginDesigner } from "./murder/LoginDesigner";
 import { MouseTooltips, QuestMarker } from "./murder/MurderExtras";
 import { MurderFade } from "./murder/MurderFade";
 import { MurderHudOverlay } from "./murder/MurderHudOverlay";
+import { UpdateBadge } from "./murder/UpdateBadge";
 
 interface OsrsContainerProps {
     osrsClient: OsrsClient;
@@ -397,6 +398,8 @@ export function GameContainer({ osrsClient }: OsrsContainerProps): JSX.Element {
                             !osrsClient.loginState.worldSelectOpen && (
                                 <LoginDesigner osrsClient={osrsClient} />
                             )}
+
+                        {osrsClient.gameState === GameState.LOGIN_SCREEN && <UpdateBadge />}
 
                         {/* CSS-based OSRS menu removed in favor of GL overlay */}
 

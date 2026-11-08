@@ -14,9 +14,11 @@ One of the Sinclair household killed Lord Sinclair. Everyone else does their cho
 2. Double-click **`Murder at Sinclair Mansion.exe`**. The game opens in your browser. There's nothing to install: Node.js is bundled.
 3. Design your character, press **Play**, then **Host** a room (empty seats can be filled with bots) or **Join** a friend's room with its 6-character code.
 
+**Updates:** the game checks GitHub for a new version when it starts. The version number is in the bottom-left corner of the main menu; when an update is out, an **Update** button appears beside it. Press it and the game downloads, checks and installs the new version, then starts again. You keep your coins, cosmetics and look. What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
+
 The exe isn't code-signed, so Windows SmartScreen may say "Windows protected your PC" the first time. Choose **More info → Run anyway**. The zip is Windows only for now. On other systems, run from source (below).
 
-Friends can join from anywhere with the room code. Internet games connect peer-to-peer through [PeerJS](https://peerjs.com/), so nobody needs a hosted server or port forwarding.
+Friends can join from anywhere with the room code. Internet games connect peer-to-peer through [PeerJS](https://peerjs.com/), so nobody needs a hosted server or port forwarding. The connection always goes through a relay, so other players never see your IP address.
 
 ## The game
 
@@ -104,6 +106,7 @@ sinclair-mansion/
 | `SINCLAIR_UPNP` | (off) | Set to `1` to ask the router to open the game port when hosting (only for direct connections; PeerJS needs no open ports) |
 | `SINCLAIR_DISCOVERY` | (on) | Set to `0` to turn off LAN beacons (UDP 43595) |
 | `SINCLAIR_MATCHMAKING_URL` | (empty) | Optional: another server's `/matchmaking` URL to share one room list with (see below). Not needed for zip/P2P play. |
+| `SINCLAIR_UPDATE_CHECK` | (on) | Set to `0` to stop checking GitHub for updates |
 | `SINCLAIR_PUBLIC_ADDRESS` | first LAN IPv4 + `PORT` | Optional: the `host:port` advertised to a matchmaking registry. |
 
 ## Store, Bank and Your Progression
@@ -142,6 +145,20 @@ The zip contains a bundled Node.js runtime, so players don't need to install any
 
 The exe is a small launcher window (`tools/package/launcher/Launcher.cs`; its loading-bar stages match the server's `Boot:` log lines, so update `Milestones` there if those change) that `build:zip` compiles with the C# compiler built into Windows (.NET Framework 4), so building the zip needs Windows but no extra SDK. The server runs in a Windows job object, so quitting the launcher (or it crashing) never leaves a server running in the background. The exe isn't code-signed, so SmartScreen shows "Windows protected your PC" the first time; players choose **More info → Run anyway**.
 
+### The in-game updater
+
+`server/src/update/Updater.ts`, `client/game/murder/UpdateBadge.tsx` and `GameUpdate` in `tools/package/launcher/Launcher.cs`:
+
+1. A few seconds after starting (then every 6 hours) the server asks `api.github.com/repos/Teeroy-Jenkins/sinclair-mansion/releases/latest` for the newest release and compares its tag with its own version (`game/version.json`, written by `build:zip` from the root `package.json`; from source it reads `package.json`).
+2. The main menu polls `GET /update/status` and shows the version, plus an **Update** button and the release notes when a newer version is out.
+3. **Update now** sends `POST /update/download`: the server streams `SinclairMansion.zip` from the release into `<install>\update\`, hashing it as it goes, and keeps it only if the SHA-256 matches the `digest` GitHub publishes for the asset. Downloads only come over HTTPS from GitHub hosts.
+4. The page then sends `POST /update/restart`: the server saves and exits with code 65. The launcher checks the hash again, unpacks the zip into `update\staged\` (refusing entries that would land outside it), copies `game.sqlite*` and the logs into the new copy, renames `game\` and its own exe aside (a running exe can be renamed) and moves the new ones in, then starts the new exe with `--updated`. If anything fails before the swap, nothing changes and the old version starts again. The old files are deleted on the next start.
+5. The page waits for the server to answer with the new version, then reloads.
+
+The `/update/*` endpoints answer only loopback requests from a localhost page (or with no Origin), and the POSTs need an `X-Sinclair-Update` header, so another website can't start an update. Only a copy started by the exe can install (`SINCLAIR_LAUNCHER=1`); from source or `Play with console.cmd` the menu links to the release page.
+
+**To publish an update:** bump `version` in the root `package.json`, add patch notes to `CHANGELOG.md`, build the zip and attach it to a GitHub release tagged `vX.Y.Z` with the asset named `SinclairMansion.zip`. The release notes are what the menu shows.
+
 Saved players from the builder's machine are left out (`game.sqlite*`). To run a second copy on one PC (for testing), set another port first: `set PORT=43600` then run the exe from that command prompt.
 
 ## Hosting and Joining
@@ -169,7 +186,9 @@ friend's browser --(WebRTC data channel)--> host's browser --(WebSocket)--> host
 
 - While a tab is connected to its own copy and that copy has a room open, the tab registers the room code with PeerJS (id `sinclair-mansion-<code>`) and relays every friend who connects into its own game server (`client/network/peer/PeerLink.ts`, `PeerHost`; started by `client/game/murder/PeerHosting.ts`).
 - A friend's client talks to the host through `PeerSocket`, a WebSocket look-alike used for `peer://<code>` server URLs, so the rest of the client and the server are unchanged. Messages are cut into 16 KB frames for the data channel (`PeerFrames.ts`).
-- [PeerJS](https://github.com/peers/peerjs) (MIT, `peerjs@1.5.5`) brings everything else, using its free public cloud by default: the `0.peerjs.com` server only introduces the two browsers; Google's STUN server finds a direct path through most home routers; and PeerJS's free TURN servers (`eu-0`/`us-0.turn.peerjs.com`) relay the rest (strict routers, CGNAT).
+- [PeerJS](https://github.com/peers/peerjs) (MIT, `peerjs@1.5.5`) brings everything else, using its free public cloud: the `0.peerjs.com` server only introduces the two browsers, and PeerJS's free TURN servers (`eu-0`/`us-0.turn.peerjs.com`) carry the data.
+- **IP addresses stay hidden.** Every peer is created with `iceTransportPolicy: "relay"` and no STUN server (`client/network/peer/PeerConfig.ts`), so WebRTC never offers a direct connection: each browser only ever sees the relay's address, never another player's. The data channel is end-to-end encrypted (DTLS), so the relay can't read it. Room-list rows never carry an address, the lobby masks the addresses you save, and the login screen doesn't show the address of a game you switched to.
+- **Limits against misbehaving peers:** one game message is at most 1 MB (the server's WebSocket `maxPayload`, and the host tab's frame reader), a host relays at most 24 connections, and the room-list holder serves at most 300 connections, each asking for the list at most once a second.
 - **The internet room list** (`client/network/peer/PeerRoomList.ts`): PeerJS's free cloud can't list who's online, so the hosts keep the list themselves. One hosting tab holds the PeerJS id `sinclair-mansion-room-list-v1`; every other host reports its room to it every few seconds, and a Join browser asks it for the rows (name, host, seats, lock, in game; never a password or address). When that tab closes, the next host claims the id, so the list lasts as long as anyone is hosting.
 - The host's **tab must stay open** while friends play: it's their connection. Closing it disconnects friends who came in over the internet (friends on the LAN connect directly).
 - To the server, internet friends all connect from `127.0.0.1`, so loopback is exempt from the login rate limit.

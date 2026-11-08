@@ -3,6 +3,8 @@
 // message is cut into chunks with a one-byte header: bit 0 marks the last chunk of a message,
 // bit 1 marks a text message. The channel is reliable and ordered, so chunks arrive in order.
 
+import { MAX_PEER_MESSAGE_BYTES } from "./PeerConfig";
+
 export const CHUNK_BYTES = 16 * 1024;
 const LAST = 1;
 const TEXT = 2;
@@ -27,16 +29,28 @@ export function toFrames(data: ArrayBuffer | ArrayBufferView | string): Uint8Arr
     return frames;
 }
 
-/** Puts frames back together; `push` returns each whole message once its last chunk is in. */
+/**
+ * Puts frames back together; `push` returns each whole message once its last chunk is in, or
+ * null once a message grows past `maxBytes` (the other side is broken or hostile: hang up).
+ */
 export class FrameReader {
     private parts: Uint8Array[] = [];
+    private size = 0;
 
-    push(frame: ArrayBuffer | ArrayBufferView): ArrayBuffer | string | undefined {
+    constructor(private readonly maxBytes = MAX_PEER_MESSAGE_BYTES) {}
+
+    push(frame: ArrayBuffer | ArrayBufferView): ArrayBuffer | string | undefined | null {
         const bytes = frame instanceof ArrayBuffer ? new Uint8Array(frame) : new Uint8Array(frame.buffer, frame.byteOffset, frame.byteLength);
         if (bytes.length === 0) return undefined;
+        this.size += bytes.length - 1;
+        if (this.size > this.maxBytes) {
+            this.parts = [];
+            this.size = 0;
+            return null;
+        }
         this.parts.push(bytes.subarray(1));
         if (!(bytes[0] & LAST)) return undefined;
-        const size = this.parts.reduce((n, p) => n + p.length, 0);
+        const size = this.size;
         const whole = new Uint8Array(size);
         let at = 0;
         for (const p of this.parts) {
@@ -44,6 +58,7 @@ export class FrameReader {
             at += p.length;
         }
         this.parts = [];
+        this.size = 0;
         return bytes[0] & TEXT ? new TextDecoder().decode(whole) : whole.buffer;
     }
 }

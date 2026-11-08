@@ -9,6 +9,7 @@
 //   README.txt
 //   game/node/node.exe            this Node.js runtime
 //   game/launch.mjs               starts the server, then opens the browser
+//   game/version.json             this build's version (the in-game updater compares it with GitHub)
 //   game/Play with console.cmd    the same with the server's output in a window (troubleshooting)
 //   game/logs/server.log          written by the exe each run
 //   game/server/                  src, gamemodes, extrascripts, data, caches, config
@@ -57,13 +58,16 @@ for (const dir of fs.readdirSync(path.join(game, "server", "data", "gamemodes"))
     for (const file of fs.readdirSync(at)) if (file.startsWith("game.sqlite")) fs.rmSync(path.join(at, file));
 }
 fs.copyFileSync(path.join(repo, "tools", "package", "launch.mjs"), path.join(game, "launch.mjs"));
+// The version the main menu shows and the updater compares with GitHub's latest release.
+const version = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8")).version;
+fs.writeFileSync(path.join(game, "version.json"), JSON.stringify({ version }) + "\n");
 
 console.log(`Compiling ${exeName} ...`);
 execSync(
     [
         `"${csc}"`, "/nologo", "/target:winexe", "/optimize+", "/platform:anycpu",
         `/win32icon:"${path.join(repo, "client", "public", "favicon", "favicon.ico")}"`,
-        "/r:System.Windows.Forms.dll", "/r:System.Drawing.dll",
+        "/r:System.Windows.Forms.dll", "/r:System.Drawing.dll", "/r:System.IO.Compression.dll", "/r:System.IO.Compression.FileSystem.dll",
         `/out:"${path.join(stage, exeName)}"`,
         `"${path.join(repo, "tools", "package", "launcher", "Launcher.cs")}"`,
     ].join(" "),
@@ -92,6 +96,10 @@ fs.writeFileSync(
         "It works over the internet with no router setup (WebRTC, through the free PeerJS",
         "service), and on your home network directly. Windows may ask to allow Node.js through",
         "the firewall the first time: allow it (for friends on your home network).",
+        "",
+        "Updates: when a new version is out, the main menu shows Update next to the version",
+        "number (bottom left). Press it and the game downloads, checks and installs it, then",
+        "starts again. Your coins, cosmetics and look are kept.",
         "",
         "Trouble? Press Show log in the game's window (game\\logs\\server.log), or run",
         "game\\Play with console.cmd to see the server's messages in a window.",

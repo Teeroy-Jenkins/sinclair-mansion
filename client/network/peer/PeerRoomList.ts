@@ -10,6 +10,8 @@
 // an address: joining goes through the room code, like typing it in.
 import Peer, { type DataConnection, type PeerError } from "peerjs";
 
+import { PEER_OPTIONS } from "./PeerConfig";
+
 const ROOM_LIST_ID = "sinclair-mansion-room-list-v1";
 /** How often hosts report and browsers ask. */
 const REFRESH_MS = 4000;
@@ -19,6 +21,8 @@ const ROOM_TTL_MS = 15_000;
 const RETRY_MS = 4000;
 const CONNECT_TIMEOUT_MS = 12_000;
 const MAX_ROOMS = 100;
+/** Hosts and browsers the list holder talks to at once. */
+const MAX_LIST_CONNECTIONS = 300;
 const ROOM_CODE = /^[A-Z0-9]{6}$/;
 
 /** One room on the list; joined over PeerJS with its code. */
@@ -70,6 +74,7 @@ class RoomList {
     /** The list itself, while this tab holds ROOM_LIST_ID (claiming or claimed). */
     private holder?: Peer;
     private holding = false;
+    private serving = 0;
     private readonly reports = new Map<DataConnection, { room: InternetRoom; at: number }>();
     private tick?: ReturnType<typeof setInterval>;
     private retry?: ReturnType<typeof setTimeout>;
@@ -133,7 +138,7 @@ class RoomList {
     private connect(): void {
         if (!this.running || this.holder || this.conn) return;
         if (!this.peer || this.peer.destroyed) {
-            const peer = new Peer();
+            const peer = new Peer(PEER_OPTIONS);
             this.peer = peer;
             peer.on("open", () => this.peer === peer && this.connect());
             peer.on("error", (err: PeerError<string>) => this.peer === peer && this.onPeerError(err));
@@ -216,7 +221,7 @@ class RoomList {
     // ------------------------------------------------------------------ holding the list
     private claim(): void {
         if (this.holder) return;
-        const holder = new Peer(ROOM_LIST_ID);
+        const holder = new Peer(ROOM_LIST_ID, PEER_OPTIONS);
         this.holder = holder;
         holder.on("open", () => {
             if (this.holder !== holder) return;
@@ -240,18 +245,30 @@ class RoomList {
     }
 
     private serve(conn: DataConnection): void {
+        if (++this.serving > MAX_LIST_CONNECTIONS) {
+            this.serving--;
+            conn.on("open", () => conn.close());
+            return;
+        }
+        let asked = 0;
         conn.on("data", (data) => {
             const m = data as Message;
             if (m?.t === "report") {
                 const room = cleanRoom(m.room);
                 if (room) this.reports.set(conn, { room, at: Date.now() });
                 else this.reports.delete(conn);
-            } else if (m?.t === "list") {
+            } else if (m?.t === "list" && Date.now() - asked > 1000) {
+                asked = Date.now(); // at most one list a second per connection
                 const reply: Message = { t: "rooms", rooms: this.heldRooms() };
                 conn.send(reply);
             }
         });
-        const end = () => this.reports.delete(conn);
+        let ended = false;
+        const end = () => {
+            this.reports.delete(conn);
+            if (!ended) this.serving--;
+            ended = true;
+        };
         conn.on("close", end);
         conn.on("error", end);
     }
