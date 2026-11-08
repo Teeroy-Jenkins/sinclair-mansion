@@ -196,10 +196,15 @@ export const MURDER_CONFIG = {
         reportChance: 0.85,
         /** Bots pick up items off the floor at most once every this many ticks (a person's click rate). */
         pickupEveryTicks: 2,
-        /** Every bot waits this many seconds (min..max) after sitting down at the table before its first vote. */
-        voteDelaySec: [12, 20] as [number, number],
-        /** A bot changes its vote at most this many times a table. */
-        maxVoteChanges: 2,
+        /** Every bot puts its vote in this many seconds (min..max) after sitting down at the table. */
+        voteDelaySec: [4, 16] as [number, number],
+        /**
+         * A bot changes its vote at most this many times a table, and only for a reason: new
+         * evidence (its own, or the Detective naming someone) or the real players voting together.
+         */
+        maxVoteChanges: 1,
+        /** Even with a reason, the chance it acts on it at each rethink (every 2.5-5.5 s): changes are rare. */
+        voteChangeChance: 0.3,
         /** Murderer bots: chance they plan to escape (the rest plan to kill). */
         murdererEscapeChance: 0.5,
         /** Killer Murderer bots that keep the murder weapon on them to fight with. */

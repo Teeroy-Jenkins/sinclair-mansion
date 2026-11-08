@@ -1873,7 +1873,7 @@ check("bots pick things up off the floor no faster than once every 2 ticks", () 
     assert.ok(w.game.botPickupReady(human));
 });
 
-check("at the table every bot waits 12-20 seconds before its first vote (and may change its mind after)", () => {
+check("at the table every bot puts its vote in 4-16 seconds after sitting down", () => {
     const w = makeWorld();
     w.game.start("p:Host", 8);
     const first = new Map<string, number>();

@@ -151,9 +151,11 @@ person's clicks take, at a human pace (reaction delays, typing speed). Each has 
   (stalk people who are alone, ambush with the claws). It frames someone at the table.
 - **The Detective bot** watches everything in sight, studies the body, follows prints, searches
   the likeliest suspect and defends anyone attacked.
-- At the table every bot waits 12–20 s, then votes on evidence of its own. After 15 s it may
-  change its vote, up to twice, swayed by names that keep coming up, the Detective's word and
-  where the votes are piling up.
+- At the table every bot votes within 4–16 s. It votes for no arrest unless something points at
+  someone: what it saw, accusations in chat (the Detective's word counts most) or the real players
+  voting together. Bots never follow each other's votes. After that it rarely changes its vote
+  (once at most), and only for new evidence or the real players voting together; in the last 15 s
+  only the real players voting together can move it.
 
 ## Coins, Store and Bank
 

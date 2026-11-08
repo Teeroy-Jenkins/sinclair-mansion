@@ -14,9 +14,11 @@
 //    finish the job. A killer who gets nowhere starts working on the way out instead.
 //  - The Detective watches everything in sight, studies the body, follows fingerprints, frisks the
 //    likeliest suspect, patrols where people are, and steps in when someone is attacked.
-//  - At the table, everyone votes after 12-20 seconds on what they know, then listens:
-//    names that keep coming up in chat, what the Detective says and where the votes are piling up
-//    can change their mind. The Murderer frames someone.
+//  - At the table, everyone votes within 4-16 seconds on what they know: no arrest, unless
+//    something it saw, names accused in chat or the real players voting together point at someone.
+//    After that it rarely changes its mind, and only for new evidence (the Detective naming
+//    someone) or the real players voting together. Bots never follow each other's votes, and a
+//    bot saying how it voted isn't an accusation. The Murderer frames someone.
 
 import { DEMON_BUTLER, WARE_ITEM, warePrice, type Ware } from "./butler";
 import { LINES, makePersona, pick, theRoom as roomName, listJoin, voice, type Persona } from "./botChat";
@@ -109,7 +111,7 @@ interface BotState {
     // ---- talking
     lastSaid: number;
     lastReply: number;
-    outbox: Array<{ text: string; meant?: string; at: number; then?: () => void }>;
+    outbox: Array<{ text: string; meant?: string; echo?: boolean; at: number; then?: () => void }>;
     tableLines: string[];
     nextLineAt: number;
     nextBanterAt: number;
@@ -206,6 +208,9 @@ interface ChatLine {
     speaker: string;
     speakerKey: string;
     fromDetective: boolean;
+    fromBot: boolean;
+    /** A bot saying how it voted: the others don't count it as one more accusation. */
+    echo: boolean;
     accuse: Set<string>;
     defend: Set<string>;
     mentions: string[];
@@ -217,7 +222,7 @@ const ACCUSE = /\b(sus|suss|sussy|did it|murderer|killer|killed|kill|vote|voting
 const SKIP = /\b(skip\w*|no arrest|no one|noone|nobody)\b/i;
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-function parseChat(game: MurderGame, speaker: Participant, text: string): ChatLine {
+function parseChat(game: MurderGame, speaker: Participant, text: string, echo = false): ChatLine {
     const mentions: string[] = [];
     const accuse = new Set<string>();
     const defend = new Set<string>();
@@ -233,7 +238,7 @@ function parseChat(game: MurderGame, speaker: Participant, text: string): ChatLi
     }
     return {
         tick: game.tick, round: game.round, phase: game.phase, speaker: speaker.name, speakerKey: speaker.key,
-        fromDetective: game.isDetective(speaker), accuse, defend, mentions,
+        fromDetective: game.isDetective(speaker), fromBot: speaker.isBot, echo, accuse, defend, mentions,
         question: /\?/.test(text) && /\b(where|what|why|who|how)\b/i.test(text),
         skip: SKIP.test(text) && !mentions.length,
     };
@@ -752,8 +757,8 @@ export function createBotBrain(mover: BotMover) {
     }
 
     /** Someone said something: everyone who could hear it takes note, and may answer. */
-    function hear(game: MurderGame, speaker: Participant, text: string): void {
-        const line = parseChat(game, speaker, text);
+    function hear(game: MurderGame, speaker: Participant, text: string, echo = false): void {
+        const line = parseChat(game, speaker, text, echo);
         const log = chats.get(game) ?? [];
         log.push(line);
         if (log.length > 300) log.splice(0, log.length - 300);
@@ -803,8 +808,8 @@ export function createBotBrain(mover: BotMover) {
      * Start "typing" a line in this bot's own voice: it shows once a person could have typed it.
      * Remarks are spaced out (chattier bots talk more); shouts and replies go straight out.
      */
-    function say(game: MurderGame, p: Participant, b: BotState, text: string, opts: { urgent?: boolean; reply?: boolean; then?: () => void; delaySec?: number; joke?: boolean } = {}): void {
-        const { urgent = false, reply = false, then, delaySec = 0, joke = false } = opts;
+    function say(game: MurderGame, p: Participant, b: BotState, text: string, opts: { urgent?: boolean; reply?: boolean; then?: () => void; delaySec?: number; joke?: boolean; echo?: boolean } = {}): void {
+        const { urgent = false, reply = false, then, delaySec = 0, joke = false, echo = false } = opts;
         if (!urgent && !reply && !then && game.tick - b.lastSaid < secToTicks(15 / b.persona.chatty)) return;
         if (reply && !then && game.tick - b.lastReply < secToTicks(4)) return;
         if (b.outbox.length > 3 && !then) return; // it's got enough to type already
@@ -816,7 +821,7 @@ export function createBotBrain(mover: BotMover) {
         let after = (b.outbox.length ? b.outbox[b.outbox.length - 1].at : game.tick) + secToTicks(delaySec); // one line at a time
         lines.forEach((l, i) => {
             after += secToTicks(i === 0 ? typingSec(l, urgent) : 0.6 + l.length / 6);
-            b.outbox.push({ text: l, meant: i === 0 && !joke ? text : undefined, at: after, then: i === lines.length - 1 ? then : undefined });
+            b.outbox.push({ text: l, meant: i === 0 && !joke ? text : undefined, echo, at: after, then: i === lines.length - 1 ? then : undefined });
         });
     }
     function sendTyped(game: MurderGame, p: Participant, b: BotState): void {
@@ -824,7 +829,7 @@ export function createBotBrain(mover: BotMover) {
             const line = b.outbox.shift()!;
             game.io.say(p, line.text);
             // The other bots hear it like anyone else (and read past the typos); a joke isn't evidence.
-            if (line.meant !== undefined) hear(game, p, line.meant);
+            if (line.meant !== undefined) hear(game, p, line.meant, line.echo);
             line.then?.();
         }
     }
@@ -999,7 +1004,7 @@ export function createBotBrain(mover: BotMover) {
         }
         if (game.phase === "arrest") {
             const [lo, hi] = C.bots.voteDelaySec;
-            // Everyone listens a while before the first vote (12-20 s); the Detective is quickest of them.
+            // Everyone votes early (4-16 s), on what it knows by then; the Detective is quickest of them.
             b.voteAt = game.tick + secToTicks(sleuth(game, p) ? lo + Math.random() * (hi - lo) * 0.4 : lo + Math.random() * (hi - lo));
             b.voted = false;
             b.myVote = undefined;
@@ -1419,12 +1424,35 @@ export function createBotBrain(mover: BotMover) {
     }
 
     /**
-     * Who to vote for, and how sure: what it saw itself, the names that keep coming up in chat
-     * (the Detective's word counts thrice, a name it's been vouched for counts against), and where
-     * the votes are already piling up (the easily led follow the pile). The Murderer never votes
-     * for itself and leans on whoever it's framing.
+     * What the real players (not bots) are doing with their votes: how many of them have voted for
+     * each person, and who they're voting for together, if anyone. Together means at least two of
+     * them, more than half of the real players at the table; a lone real player counts only when
+     * someone has also accused that person in chat this round.
      */
-    function decideVote(game: MurderGame, p: Participant, b: BotState, first = false): { key: string | null; score: Map<string, number>; pile: boolean } {
+    function humanTrend(game: MurderGame, p: Participant): { counts: Map<string, number>; trend?: string } {
+        const humans = game.living().filter((q) => !q.isBot && q !== p);
+        const counts = new Map<string, number>();
+        for (const h of humans) {
+            const t = game.votes.get(h.key);
+            if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
+        }
+        const top = [...counts].sort((a, z) => z[1] - a[1])[0];
+        if (!top || top[0] === p.key) return { counts };
+        const [key, n] = top;
+        const name = game.participants.get(key)?.name;
+        const accused = !!name && (chats.get(game) ?? []).some((l) => l.round === game.round && !l.echo && l.accuse.has(name));
+        const together = (n >= 2 && n * 2 > humans.length) || (humans.length === 1 && n === 1 && accused);
+        return { counts, trend: together ? key : undefined };
+    }
+
+    /**
+     * Who to vote for, and how sure. No arrest unless something points at someone: what it saw
+     * itself, names accused in chat (the Detective's word counts thrice, a name it's been vouched
+     * for counts against, a bot repeating how it voted doesn't count) and the real players voting
+     * together. Bots never follow each other's votes. The Murderer never votes for itself and leans
+     * on whoever it's framing.
+     */
+    function decideVote(game: MurderGame, p: Participant, b: BotState, first = false): { key: string | null; score: Map<string, number>; trend?: string; reason?: "evidence" | "trend" } {
         const others = game.living().filter((q) => q !== p);
         const score = new Map<string, number>();
         const add = (name: string, n: number) => {
@@ -1432,16 +1460,17 @@ export function createBotBrain(mover: BotMover) {
             if (q) score.set(q.key, (score.get(q.key) ?? 0) + n);
         };
         const detective = sleuth(game, p);
-        for (const [name, n] of evidence(game, p, b)) add(name, detective ? 1.5 * n : n);
+        const seen = evidence(game, p, b);
+        for (const [name, n] of seen) add(name, detective ? 1.5 * n : n);
         let skips = 0;
         const speakers = new Map<string, Set<string>>();
         for (const line of chats.get(game) ?? []) {
-            if (line.round !== game.round || line.speakerKey === p.key) continue;
-            const w = (line.phase === "arrest" ? 1 : 0.6) * (line.fromDetective ? 3 : 1);
+            if (line.round !== game.round || line.speakerKey === p.key || line.echo) continue;
+            const w = (line.phase === "arrest" ? 1 : 0.6) * (line.fromDetective ? 3 : 1) * (line.fromBot ? 0.8 : 1);
             for (const n of line.accuse) {
                 if (n === p.name) {
-                    // Someone accusing an innocent bot is either wrong or framing it.
-                    if (p.role !== "murderer") add(line.speaker, 0.8);
+                    // Someone accusing an innocent bot may be wrong or framing it: a little suspicious.
+                    if (p.role !== "murderer") add(line.speaker, 0.4);
                     continue;
                 }
                 add(n, 1.5 * w);
@@ -1453,25 +1482,28 @@ export function createBotBrain(mover: BotMover) {
         }
         // A name several people bring up independently is worth more than one person repeating it.
         for (const [n, s] of speakers) if (s.size > 1) add(n, s.size - 1);
-        const { counts } = game.voteTally();
+        // The real players' votes sway it (the easily led most); other bots' votes don't.
+        const { counts, trend } = humanTrend(game, p);
         const g = b.persona.gullible;
-        let pileTop: string | undefined;
-        for (const q of others) {
-            const n = first ? 0 : counts.get(q.key) ?? 0; // a first vote is its own: no bandwagon yet
-            if (!n) continue;
-            if (!pileTop || n > (counts.get(pileTop) ?? 0)) pileTop = q.key;
-            score.set(q.key, (score.get(q.key) ?? 0) + n * (p.role === "murderer" ? 2 : 1.2 * (0.5 + g)));
+        for (const [key, n] of counts) {
+            if (key === p.key || !others.some((q) => q.key === key)) continue;
+            score.set(key, (score.get(key) ?? 0) + n * (p.role === "murderer" ? 2 : 1.2 * (0.5 + g)) + (key === trend ? 2 : 0));
         }
         if (p.role === "murderer") {
             const frame = others.find((q) => q.name === b.frameTarget);
             if (frame) score.set(frame.key, (score.get(frame.key) ?? 0) + 4);
         }
-        // A first vote takes real evidence (what it saw, or what the table already agrees on);
-        // later, the talk and the pile can tip it.
-        const threshold = (detective ? 2 : p.role === "murderer" ? 2 : 3.5 - 1.5 * g + Math.min(2, 0.4 * skips)) + (first ? 2.5 : 0);
+        // It takes something real to vote anyone out; a first vote, cast early, a little more.
+        const threshold = (detective ? 2 : p.role === "murderer" ? 2 : 3.5 - 1.5 * g + Math.min(2, 0.4 * skips)) + (first ? 1 : 0);
         const best = [...score].sort((a, z) => z[1] - a[1])[0];
         const key = best && best[1] >= threshold ? best[0] : null;
-        return { key, score, pile: !!key && key === pileTop && (counts.get(key) ?? 0) >= 2 };
+        if (!key) return { key: null, score, trend };
+        // Why, if it were to change its mind to them: the real players together, or evidence (its
+        // own, or the Detective naming them since it voted).
+        const name = game.participants.get(key)?.name ?? "";
+        const named = (chats.get(game) ?? []).some((l) => l.round === game.round && l.fromDetective && l.speakerKey !== p.key && l.tick > b.voteAt && l.accuse.has(name));
+        const reason = key === trend ? "trend" : (seen.get(name) ?? 0) >= 4 || named ? "evidence" : undefined;
+        return { key, score, trend, reason };
     }
 
     function arrestThink(game: MurderGame, p: Participant, b: BotState): void {
@@ -1494,7 +1526,8 @@ export function createBotBrain(mover: BotMover) {
         if (game.tick < b.voteAt) return;
         if (!b.voted) {
             b.voted = true;
-            b.nextEvalAt = game.tick + secToTicks(3 + Math.random() * 3);
+            b.voteAt = game.tick;
+            b.nextEvalAt = game.tick + secToTicks(2.5 + Math.random() * 3);
             const { key } = decideVote(game, p, b, true);
             castVote(game, p, b, key, "first");
             return;
@@ -1502,15 +1535,18 @@ export function createBotBrain(mover: BotMover) {
         if (game.tick < b.nextEvalAt) return;
         b.nextEvalAt = game.tick + secToTicks(2.5 + Math.random() * 3);
         if (b.voteChanges >= C.bots.maxVoteChanges || game.phaseEnds - game.tick < secToTicks(2)) return;
-        // Hear the table out a little before changing anything.
-        if (game.tick - game.phaseStart < secToTicks(15)) return;
-        const { key, score, pile } = decideVote(game, p, b);
-        if (key === b.myVote || key === null) return;
+        // Its vote stands unless something new comes up: evidence, or the real players voting
+        // together. Even then it doesn't always budge.
+        const { key, score, reason } = decideVote(game, p, b);
+        if (key === b.myVote || key === null || !reason) return;
         // Changing one's mind takes a clear lead over what it voted for.
         const now = b.myVote ? score.get(b.myVote) ?? 0 : 0;
         if ((score.get(key) ?? 0) < now + 2) return;
+        // Late on, only the real players voting together moves it: no last-second pile-ons.
+        if (reason !== "trend" && game.phaseEnds - game.tick < secToTicks(15)) return;
+        if (!chance(C.bots.voteChangeChance)) return;
         b.voteChanges++;
-        castVote(game, p, b, key, pile ? "pile" : "change");
+        castVote(game, p, b, key, reason === "trend" ? "pile" : "change");
     }
 
     /** Put the vote in, and (often) say so. The Detective always explains itself. */
@@ -1521,18 +1557,19 @@ export function createBotBrain(mover: BotMover) {
         if (game.vote(p, key)) return; // it didn't count (they left the table): nothing to say
         const q = key ? game.participants.get(key) : undefined;
         if (sleuth(game, p) && q) {
-            const said = new Set((chats.get(game) ?? []).filter((l) => l.round === game.round && l.accuse.has(q.name)).map((l) => l.speaker)).size;
+            const said = new Set((chats.get(game) ?? []).filter((l) => l.round === game.round && !l.echo && l.accuse.has(q.name)).map((l) => l.speaker)).size;
             const set = knownWeaponPrints(game, p)?.prints;
             const reason = b.sawClaws === q.name ? "claws" : set?.includes(q.name) ? "prints" : said > 1 ? "many" : said === 1 ? "one" : "hunch";
             b.outbox = b.outbox.filter((l) => !l.then); // the case comes first
             say(game, p, b, `${LINES.detAccuse(q.name, reason, p.knownCategory)}. ${pick(["I vote to arrest you", "my vote's on you", "you're under arrest"])}`, { urgent: true });
             return;
         }
+        // Saying how it voted is just that: the others don't take it as another accusation.
         if (why === "first") {
-            if (q && chance(0.55)) say(game, p, b, LINES.vote(q.name), { reply: true });
-            else if (!q && chance(0.3)) say(game, p, b, LINES.voteSkip(), { reply: true });
+            if (q && chance(0.55)) say(game, p, b, LINES.vote(q.name), { reply: true, echo: true });
+            else if (!q && chance(0.3)) say(game, p, b, LINES.voteSkip(), { reply: true, echo: true });
         } else if (q && prev !== key && chance(0.65)) {
-            say(game, p, b, why === "pile" ? LINES.votePile(q.name) : LINES.voteChange(q.name), { reply: true });
+            say(game, p, b, why === "pile" ? LINES.votePile(q.name) : LINES.voteChange(q.name), { reply: true, echo: true });
         }
     }
 

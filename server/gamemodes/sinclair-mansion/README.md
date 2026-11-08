@@ -138,14 +138,18 @@ remembered in the browser.
    them, or nobody, someone who voted for them) gets up and walks round to them, takes them by the
    arm (2009scape's pickpocket reach, 881) while they protest (the "No" emote, 856), and they're led
    away. Only then is it read out what they carried and whether they did it. Ghosts don't vote. Everyone who voted for the
-   Murderer is paid. Bots vote too, each 12-20 s after sitting down (`C.bots.voteDelaySec`): a
-   first vote needs real evidence of their own (claws, an attack, an escape attempt, a hand-off
-   they saw; the Detective's notebook), otherwise they skip. Then they listen: names that keep
-   coming up in chat (from people and bots alike, and from several people more than one person
-   repeating it), names someone vouched for, what the Detective says (it counts three times) and
-   where the votes are piling up (the easily led follow the pile). After 15 s they may change their
-   vote, up to twice (`C.bots.maxVoteChanges`). The bot Murderer frames someone (whoever it planted on or handed the weapon
-   to, someone it saw rummaging, or anyone), joins any pile that isn't on itself, and makes a fuss
+   Murderer is paid. Bots vote too, each 4-16 s after sitting down (`C.bots.voteDelaySec`), and the default is no
+   arrest: they vote for someone only when something points at them: real evidence of their own
+   (claws, an attack, an escape attempt, a hand-off they saw; the Detective's notebook), names
+   accused in chat (from several people more than one person repeating it; names someone vouched
+   for count against; the Detective counts three times; a bot saying how it voted doesn't count)
+   or the real players voting together (at least two of them and more than half, or a lone real
+   player whose pick was also accused in chat). Bots never follow other bots' votes. After that
+   a bot changes its vote at most once (`C.bots.maxVoteChanges`), only for new evidence (the
+   Detective naming someone since it voted) or the real players voting together, and even then
+   only now and then (`C.bots.voteChangeChance`); in the last 15 s only the real players can move
+   it. The bot Murderer frames someone (whoever it planted on or handed the weapon
+   to, someone it saw rummaging, or anyone), follows the real players' votes when they aren't on itself, and makes a fuss
    when the votes turn its way.
 
 **How it ends.** There is no round limit. The household wins by arresting or killing the
@@ -563,7 +567,7 @@ fate, the richest player, and your coin total.
   line appears only after the time it would take to type it, at 4-6 characters a second (about
   45-70 words a minute): a shout takes about 5 s, a table alibi 10-20 s. Lines go out one at a
   time, the next table line waits a few seconds after the last, and a shout drops whatever small
-  talk was still being typed. Votes go in as clicks (12-20 s after sitting down); saying who they voted
+  talk was still being typed. Votes go in as clicks (4-16 s after sitting down); saying who they voted
   for is typed after.
 * **Zones.** While the household is spread out, the living only see people in their own zone:
   Dining Room, Entrance Hall, West Wing, East Wing, Library, Upstairs Hall, Upstairs West,

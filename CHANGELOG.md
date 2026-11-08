@@ -1,5 +1,13 @@
 # Patch notes
 
+## v0.4.2
+
+**Bots vote early and stick to it**
+- Every bot now puts its vote in 4 to 16 seconds after sitting down at the table (the Detective is usually first). No more votes landing in the last few seconds.
+- Bots vote for **no arrest** unless something points at someone: what they saw for themselves, accusations made in chat, or the real players voting for the same person.
+- After that a bot rarely changes its vote, and at most once. It only does so for new evidence (such as the Detective naming someone) or when the real players are voting together for one person. In the last 15 seconds only the real players voting together can move it.
+- Bots no longer follow each other's votes, and a bot saying "my vote's on X" no longer counts as another accusation of X. This stopped a whole table of bots piling onto one player at the last minute.
+
 ## v0.4.1
 
 **Lobby changes**
