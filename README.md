@@ -16,13 +16,13 @@ FYI: The exe isn't code-signed, so you may get a prompt saying "Windows protecte
 2. Double-click **`Murder at Sinclair Mansion.exe`**. The game opens in your browser. There's nothing to install: Node.js is bundled.
 3. Design your character, press **Play**, then **Host** a room (empty seats can be filled with bots) or **Join** a friend's room with a room code.
 
-## How to Play
+# How to Play
 
-# **Roles:** The household (4–10 players) includes one **Murderer** and a **Detective**.
+## **Roles:** The household (4–10 players) includes one **Murderer** and a **Detective**.
 - **The Detective** should study the body to look for clues and dust weapons for fingerprints. They can also stop and search people once per round.
 - **The Murderer** might hide the murder weapon, or plant the murder weapon on another player! Pickpocket it back even. Ambush people with **dragon claws**, or find a way to escape the grounds.
 - **The Household** will do chores and keep their eyes open! Gain IOU's that can be spent on items to help survive the chaos...
-# **Progression:** Earn coins, buy cosmetics (party hats, h'ween masks, toys...) horde them in your bank if you choose.
+## **Progression:** Earn coins, buy cosmetics (party hats, h'ween masks, toys...) horde them in your bank if you choose.
 
 
 **Updates:** The version number is in the bottom-left corner of the main menu; when an update is out, an **Update** button appears beside it. What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
